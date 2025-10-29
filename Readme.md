@@ -83,3 +83,7 @@ No clutter, no overwhelm — just smooth task transitions.
 
 MIT License  
 Feel free to use, modify, and share.
+
+
+![Screenshot](Img/App.png)
+
