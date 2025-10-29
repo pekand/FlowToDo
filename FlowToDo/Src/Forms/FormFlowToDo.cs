@@ -247,6 +247,113 @@ namespace FlowToDo
 
         }
 
+        // EVENT DRAG ENTER
+        private void FormFlowToDo_DragEnter(object sender, DragEventArgs e)
+        {
+            if (!inicialized)
+            {
+                return;
+            }
+
+
+            bool hasContent = false;
+            try
+            {
+
+
+                if (e.Data.GetData(DataFormats.FileDrop) != null)
+                    hasContent = true;
+                else if (e.Data.GetData(DataFormats.Text) != null)
+                    hasContent = true;
+                else if (e.Data.GetData(DataFormats.UnicodeText) != null)
+                    hasContent = true;
+                else if (e.Data.GetData(DataFormats.Html) != null)
+                    hasContent = true;
+
+            }
+            catch (Exception)
+            {
+
+
+            }
+
+            e.Effect = DragDropEffects.None;
+
+            if (hasContent) {
+                e.Effect = DragDropEffects.Copy;
+            }
+        }
+
+        // EVENT DRAG DROP
+        private void FormFlowToDo_DragDrop(object sender, DragEventArgs e)
+        {
+            if (!inicialized)
+            {
+                return;
+            }
+
+            bool hasContent = false;
+
+            string text = null;
+            string html = null;
+            Bitmap image = null;
+            string[] files = null;
+
+            try
+            {
+
+                if (e.Data.GetData(DataFormats.FileDrop) != null)
+                {
+                    files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                    hasContent = true;
+                }
+
+                if (e.Data.GetData(DataFormats.Text) != null)
+                {
+                    text = (string)e.Data.GetData(DataFormats.Text);
+                    hasContent = true;
+                }
+
+                if (e.Data.GetData(DataFormats.UnicodeText) != null)
+                {
+                    text = (string)e.Data.GetData(DataFormats.UnicodeText);
+                    hasContent = true;
+                }
+
+                if (e.Data.GetData(DataFormats.Html) != null)
+                {
+                    html = (string)e.Data.GetData(DataFormats.Html);
+                    hasContent = true;
+                }
+            }
+            catch (Exception)
+            {
+
+
+            }
+
+            if (files != null && files.Length == 1 && Path.GetExtension(files[0]) == ".FlowToDo")
+            {
+                this.OpenFile(files[0]);
+            }
+            else if (text != null) {
+                richTextBoxNote.SelectedText = text;
+            } else if (html != null) {
+                richTextBoxNote.SelectedText = html;
+            } else if (html != null)
+            {
+                richTextBoxNote.SelectedText = html;
+            } else if(files != null && files.Length > 0) {
+                foreach (string f in files)
+                {
+
+                    richTextBoxNote.SelectedText = "\""+f+"\"" + "\r\n";
+                }
+            }
+
+                
+        }
+
         /******************************************************************************************/
 
         // TIMER TICK
@@ -403,8 +510,6 @@ namespace FlowToDo
                     this.richTextBoxNote.BackColor = this.TodoColor;
                 }
             }
-
-            HighlightFilePaths();
         }
 
         // TOOL GET PREV TODO
@@ -506,17 +611,20 @@ namespace FlowToDo
                         {
                             this.richTextBoxNote.Rtf = this.data.currentTodo.text;
                             this.unmodifiedText = this.richTextBoxNote.Rtf;
+                            HighlightFilePaths();
                         }
                         catch
                         {
                             this.richTextBoxNote.Text = this.data.currentTodo.text;
                             this.unmodifiedText = this.richTextBoxNote.Rtf;
+                            HighlightFilePaths();
                         }
                     }
                     else
                     {
                         this.richTextBoxNote.Text = this.data.currentTodo.text;
                         this.unmodifiedText = this.richTextBoxNote.Rtf;
+                        HighlightFilePaths();
                     }
 
                 }
@@ -525,6 +633,31 @@ namespace FlowToDo
             suspenUnsave = false;
 
             updatePager();
+        }
+
+        // TOOL GO TO NODE BY INDEX (SKIP DONE AND DELETED)
+        public ToDo selectTodoByNumber(int pos)
+        {
+            ToDo selectedTodo = null;
+            int currentPos = -1;
+            for (int i = 0; i < this.data.todoList.Count(); i++)
+            {
+                if ((this.data.todoList[i].deleted && !showDeleted) ||
+                    (this.data.todoList[i].done && !showDone))
+                {
+                    continue;
+                }
+
+                currentPos++;
+
+                if (pos - 1 == currentPos)
+                {
+                    selectedTodo = this.data.todoList[i];
+                    break;
+                }
+            }
+
+            return selectedTodo;
         }
 
         // BUTTON  +
@@ -645,6 +778,16 @@ namespace FlowToDo
             normalToolStripMenuItem.Checked = showNormal;
             doneToolStripMenuItem.Checked = showDone;
             deletedToolStripMenuItem.Checked = showDeleted;
+        }
+
+        // CONTEXTMENU NEW FILE
+        private void newToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.SaveFile();
+
+
+            this.pathToFlowToDoFile = "";
+            this.initTodoList();
         }
 
         // CONTEXTMENU FILE SAVE
@@ -810,16 +953,6 @@ namespace FlowToDo
         // TEXTBOX TECH CHANGE
         private void richTextBoxNote_TextChanged(object sender, EventArgs e)
         {
-            // Save cursor position
-            int selectionStart = richTextBoxNote.SelectionStart;
-            int selectionLength = richTextBoxNote.SelectionLength;
-
-            HighlightFilePaths();
-
-            // Restore cursor position
-            richTextBoxNote.SelectionStart = selectionStart;
-            richTextBoxNote.SelectionLength = selectionLength;
-
             if (saved && this.unmodifiedText != this.richTextBoxNote.Rtf)
             {
                 this.unsave();
@@ -867,8 +1000,12 @@ namespace FlowToDo
 
         // TEXTBOX HIGLIGHT
         private void HighlightFilePaths()
-        {
+        {        
             SuspendDrawing(richTextBoxNote);
+
+            int selectionStart = richTextBoxNote.SelectionStart;
+            int selectionLength = richTextBoxNote.SelectionLength;
+
             string pattern = "(\"[a-zA-Z]:\\\\[^\"]+\")|(https?://\\S+)";
             foreach (Match match in Regex.Matches(richTextBoxNote.Text, pattern))
             {
@@ -878,6 +1015,11 @@ namespace FlowToDo
             }
 
             richTextBoxNote.Select(richTextBoxNote.TextLength, 0);
+            
+            // Restore cursor position
+            richTextBoxNote.SelectionStart = selectionStart;
+            richTextBoxNote.SelectionLength = selectionLength;
+
             ResumeDrawing(richTextBoxNote);
         }
 
@@ -894,34 +1036,7 @@ namespace FlowToDo
             ctrl.Invalidate();
         }
 
-
-        /******************************************************************************************/
-        public void separator() { }
-
-
-        public ToDo selectTodoByNumber(int pos)
-        {
-            ToDo selectedTodo = null;
-            int currentPos = -1;
-            for (int i = 0; i < this.data.todoList.Count(); i++)
-            {
-                if ((this.data.todoList[i].deleted && !showDeleted) ||
-                    (this.data.todoList[i].done && !showDone))
-                {
-                    continue;
-                }
-
-                currentPos++;
-
-                if (pos - 1 == currentPos)
-                {
-                    selectedTodo = this.data.todoList[i];
-                    break;
-                }
-            }
-
-            return selectedTodo;
-        }
+        // TEXTBOX SUSPEN RESUME
         private void textBoxPosition_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
@@ -945,58 +1060,10 @@ namespace FlowToDo
 
         }
 
-        private void FormFlowToDo_DragEnter(object sender, DragEventArgs e)
-        {
-            if (!inicialized) {
-                return;
-            }
+        /******************************************************************************************/
 
-            if (e.Data != null && e.Data.GetDataPresent(DataFormats.FileDrop))
-                e.Effect = DragDropEffects.Copy;
-            else
-                e.Effect = DragDropEffects.None;
-        }
-
-        private void FormFlowToDo_DragDrop(object sender, DragEventArgs e)
-        {
-            if (!inicialized)
-            {
-                return;
-            }
-
-            if (e.Data == null || !e.Data.GetDataPresent(DataFormats.FileDrop))
-                return;
-
-            var files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            if (files == null || files.Length == 0 || files.Length > 1)
-                return;
-
-            foreach (var f in files)
-            {
-                try
-                {
-                    var ext = Path.GetExtension(f);
-                    if (ext == ".FlowToDo")
-                    {
-                        this.OpenFile(f);
-                    }
-                }
-                catch (Exception ex)
-                {
-
-                }
-            }
-        }
-
-        // CONTEXTMENU NEW FILE
-        private void newToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            this.SaveFile();
-
-
-            this.pathToFlowToDoFile = "";
-            this.initTodoList();
-        }
+        // SPLIT CODE TO SORTEn AND UNSORTED PART
+        public void separator() { }
     }
 
     // RITCHTEXT HELPER
