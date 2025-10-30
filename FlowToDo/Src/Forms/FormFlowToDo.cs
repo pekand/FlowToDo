@@ -35,30 +35,38 @@ namespace FlowToDo
         private const int WM_SETREDRAW = 0x0B;
 
         // CONSTRUCTOR
-        public FormFlowToDo(string pathToFlowToDoFile)
+        public FormFlowToDo(string filePath)
         {
             this.DoubleBuffered = true;
-
-            this.pathToFlowToDoFile = pathToFlowToDoFile;
 
             InitializeComponent();
 
             defaultRitchTextFont = richTextBoxNote.Font;
 
-            if (this.pathToFlowToDoFile == "" || !File.Exists(pathToFlowToDoFile))
+            this.Width = 1000;
+            this.Height = 500;
+            this.CenterToScreen();            
+
+            if (filePath == "" || !File.Exists(filePath))
             {
                 string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
                 string appDir = Path.Combine(appDataPath, Program.appName);
                 Directory.CreateDirectory(appDir);
-                this.pathToFlowToDoFile = Path.Combine(appDir, Program.mainConfigFile);
-                this.OpenFile(this.pathToFlowToDoFile);
+                string defaultFlowTodoFile = Path.Combine(appDir, Program.mainConfigFile);
+                if (this.OpenFile(defaultFlowTodoFile))
+                {
+                    this.pathToFlowToDoFile = defaultFlowTodoFile;
+                }
+                else {
+                    initTodoList();
+                }
                 updatePager();
             }
             else
             {
                 initTodoList();
             }
-
+            
             richTextBoxNote.AllowDrop = true; // must be enabled!
             richTextBoxNote.DragEnter += FormFlowToDo_DragEnter;
             richTextBoxNote.DragDrop += FormFlowToDo_DragDrop;
@@ -69,13 +77,27 @@ namespace FlowToDo
         /******************************************************************************************/
 
         // FILE OPEN
-        public void OpenFile(string filePath)
+        public bool OpenFile(string filePath)
         {
             inicialized = false;
             if (filePath != "" && File.Exists(filePath))
             {
                 try
                 {
+
+                    bool createdNew;
+                    string mutexName = "Global\\" + Program.appName + " " + filePath
+                    .Replace("\\", "_")
+                    .Replace(":", "_")
+                    .Replace("/", "_");
+
+                    Mutex? mutex = new Mutex(true, mutexName, out createdNew);
+                    if (!createdNew)
+                    {                        
+                        mutex.ReleaseMutex();
+                        mutex = null;
+                        return false;
+                    }
 
                     var serializer = new XmlSerializer(typeof(Data));
                     string xml = File.ReadAllText(filePath);
@@ -105,14 +127,25 @@ namespace FlowToDo
                     this.Top = data.winY;
                     this.Height = data.winH;
                     this.Width = data.winW;
+
+                    if (Program.mutex != null)
+                    {
+                        Program.mutex.ReleaseMutex();
+                        Program.mutex = null;
+                    }
+                    Program.mutex = mutex;
+
+                    return true;
                 }
                 catch (Exception)
                 {
-
+                    return false;
                 }
 
             }
             inicialized = true;
+
+            return false;
         }
 
         // FILE SAVE
@@ -167,7 +200,9 @@ namespace FlowToDo
         // EVENT FORM CLOSED
         private void FormFlowToDo_FormClosed(object sender, FormClosedEventArgs e)
         {
-            this.SaveFile();
+            if (!this.saved) {
+                this.SaveFile();
+            }
         }
 
         // EVENT FORM LOAD
@@ -334,7 +369,9 @@ namespace FlowToDo
 
             if (files != null && files.Length == 1 && Path.GetExtension(files[0]) == ".FlowToDo")
             {
-                this.OpenFile(files[0]);
+                if (this.OpenFile(files[0])) {
+                    this.pathToFlowToDoFile = files[0];
+                }
             }
             else if (text != null) {
                 richTextBoxNote.SelectedText = text;
@@ -376,12 +413,12 @@ namespace FlowToDo
             this.data.currentTodo = new ToDo(); 
             this.data.todoList.Add(this.data.currentTodo);
           
-            this.saved = false;
+            this.saved = true;
             this.suspenUnsave = false;
             this.unSavedAt = DateTime.Now;
             richTextBoxNote.Font = defaultRitchTextFont;
-            this.unmodifiedText = "";
-            this.richTextBoxNote.Text = this.data.currentTodo.text;            
+            this.richTextBoxNote.Text = this.data.currentTodo.text;
+            this.unmodifiedText = this.richTextBoxNote.Rtf;
 
             this.showNormal = true;
             this.showDone = false;
@@ -418,6 +455,7 @@ namespace FlowToDo
             updatePager();
         }
 
+        // TOOL COUNT BY CATEGORY
         public int CountTodos()
         {
             int count = 0;
@@ -435,6 +473,7 @@ namespace FlowToDo
             return count;
         }
 
+        // TOOL GET TODO INDEX RELATIVE TO CATEGORY
         public int GetPosOfTodos(ToDo todo)
         {
             int pos = this.data.todoList.IndexOf(todo);
@@ -823,8 +862,6 @@ namespace FlowToDo
         {
             this.textSaveToToDo();
 
-            this.SaveFile();
-
             if (!saved) // for some error maybe wrong path...
             {
                 var result = MessageBox.Show(
@@ -847,7 +884,9 @@ namespace FlowToDo
 
                 if (dlg.ShowDialog() == DialogResult.OK)
                 {
-                    this.OpenFile(dlg.FileName);
+                    if (this.OpenFile(dlg.FileName)) { 
+                        this.pathToFlowToDoFile = dlg.FileName;
+                    }
                 }
             }
         }
@@ -1001,7 +1040,7 @@ namespace FlowToDo
         // TEXTBOX HIGLIGHT
         private void HighlightFilePaths()
         {        
-            SuspendDrawing(richTextBoxNote);
+            /*SuspendDrawing(richTextBoxNote);
 
             int selectionStart = richTextBoxNote.SelectionStart;
             int selectionLength = richTextBoxNote.SelectionLength;
@@ -1020,7 +1059,7 @@ namespace FlowToDo
             richTextBoxNote.SelectionStart = selectionStart;
             richTextBoxNote.SelectionLength = selectionLength;
 
-            ResumeDrawing(richTextBoxNote);
+            ResumeDrawing(richTextBoxNote);*/
         }
 
         // TEXTBOX SUSPEN DRAWING
