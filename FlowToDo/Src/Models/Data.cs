@@ -8,12 +8,11 @@ using System.Xml.Serialization;
 namespace FlowToDo
 {
     public class Data
-    {
-        public int TodoCount = 0;        
+    {        
         public int currentTodoPos = 0;
 
         [XmlIgnore]
-        public ToDo currentTodo = null;
+        public ToDo? currentTodo = null;
         public List<ToDo> todoList = new List<ToDo>();
 
         public int winX = 100;
@@ -24,5 +23,10 @@ namespace FlowToDo
         public bool TopMost = true;
 
         public string defaultFont = "";
+
+        [XmlIgnore]
+        public int searchIndex = 0;
+        [XmlIgnore]
+        public List<SearchItem> search = new List<SearchItem>();
     }
 }

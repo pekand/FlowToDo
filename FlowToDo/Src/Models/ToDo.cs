@@ -10,6 +10,7 @@ namespace FlowToDo
     {
         public bool isEmpty = true;
         public string text = "";
+        public string rawText = "";
 
         public bool deleted = false;
         public bool done = false;
