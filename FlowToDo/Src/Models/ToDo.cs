@@ -9,8 +9,8 @@ namespace FlowToDo
     public class ToDo
     {
         public bool isEmpty = true;
-        public string text = "";
-        public string rawText = "";
+        public string? text = "";
+        public string? rawText = "";
 
         public bool deleted = false;
         public bool done = false;

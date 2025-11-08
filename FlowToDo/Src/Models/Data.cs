@@ -24,9 +24,17 @@ namespace FlowToDo
 
         public string defaultFont = "";
 
+        public string todoColor = Tools.ColorToString(Color.FromArgb(128, 255, 128));
+        public string doneColor = Tools.ColorToString(Color.FromArgb(222, 222, 222));
+        public string deletedColor = Tools.ColorToString(Color.FromArgb(255, 224, 108));
+
         [XmlIgnore]
         public int searchIndex = 0;
         [XmlIgnore]
         public List<SearchItem> search = new List<SearchItem>();
+
+        public TimeEvent? nextEvent = null;
+        [XmlIgnore]
+        public List<TimeEvent> timeEvents = new List<TimeEvent>();
     }
 }

@@ -16,9 +16,15 @@ namespace FlowToDo
             return Program.appName;
         }
 
-        static string GetExePath()
+        static string? GetExePath()
         {
-            return $"\"{Process.GetCurrentProcess().MainModule.FileName}\"";
+            Process process = Process.GetCurrentProcess();
+            if (process == null || process.MainModule == null) {
+                return null;
+            }
+
+
+            return $"\"{process.MainModule.FileName}\"";
         }
 
         public static bool AddCurrentAppToAutorun()
@@ -27,7 +33,12 @@ namespace FlowToDo
             {
                 using var key = Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Run", true);
                 if (key == null) return false;
-                key.SetValue(GetAppName(), GetExePath());
+                string? exePath = GetExePath();
+                if (exePath != null)
+                {
+                    key.SetValue(GetAppName(), exePath);
+                }
+
                 return true;
             }
             catch { return false; }
@@ -57,7 +68,12 @@ namespace FlowToDo
                 if (key == null) return false;
                 var val = key.GetValue(GetAppName()) as string;
                 if (string.IsNullOrEmpty(val)) return false;
-                var exe = GetExePath().Trim('"');
+                string? exe = GetExePath();
+                if (exe == null)
+                {
+                    return false;
+                }
+                exe = exe.Trim('"');
                 var stored = val.Trim('"');
                 return string.Equals(Path.GetFullPath(stored), Path.GetFullPath(exe), StringComparison.OrdinalIgnoreCase);
             }

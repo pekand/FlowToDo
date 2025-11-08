@@ -32,14 +32,24 @@ namespace FlowToDo
             return $"{color.A},{color.R},{color.G},{color.B}";
         }
 
-        public static Color StringToColor(string str)
+        public static Color StringToColor(string str, Color defaultColor)
         {
-            string[] parts = str.Split(',');
-            int a = int.Parse(parts[0]);
-            int r = int.Parse(parts[1]);
-            int g = int.Parse(parts[2]);
-            int b = int.Parse(parts[3]);
-            return Color.FromArgb(a, r, g, b);
+            try
+            {
+                string[] parts = str.Split(',');
+                int a = int.Parse(parts[0]);
+                int r = int.Parse(parts[1]);
+                int g = int.Parse(parts[2]);
+                int b = int.Parse(parts[3]);
+                return Color.FromArgb(a, r, g, b);
+            }
+            catch (Exception)
+            {
+
+                
+            }
+            
+            return defaultColor;
         }
     }
 }

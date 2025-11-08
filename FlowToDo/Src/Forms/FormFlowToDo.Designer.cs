@@ -47,6 +47,10 @@
             topMostToolStripMenuItem = new ToolStripMenuItem();
             defaultFontToolStripMenuItem = new ToolStripMenuItem();
             autorunToolStripMenuItem = new ToolStripMenuItem();
+            colorsToolStripMenuItem = new ToolStripMenuItem();
+            setTodoColorToolStripMenuItem = new ToolStripMenuItem();
+            setDoneColorToolStripMenuItem = new ToolStripMenuItem();
+            setDeleteColorToolStripMenuItem = new ToolStripMenuItem();
             showToolStripMenuItem = new ToolStripMenuItem();
             normalToolStripMenuItem = new ToolStripMenuItem();
             doneToolStripMenuItem = new ToolStripMenuItem();
@@ -54,13 +58,6 @@
             tableLayoutPanel1 = new TableLayoutPanel();
             richTextBoxNote = new CustomRichTextBox();
             tableLayoutPanel2 = new TableLayoutPanel();
-            flowLayoutPanel1 = new FlowLayoutPanel();
-            buttonSearchRight = new Button();
-            textBoxSearch = new TextBox();
-            buttonSearchLeft = new Button();
-            flowLayoutPanel2 = new FlowLayoutPanel();
-            textBoxPosition = new TextBox();
-            flowLayoutPanel3 = new FlowLayoutPanel();
             buttonSkipRight = new Button();
             buttonRight = new Button();
             buttonAdd = new Button();
@@ -68,13 +65,16 @@
             buttonSkipLeft = new Button();
             buttonDone = new Button();
             buttonDelete = new Button();
+            buttonSearchRight = new Button();
+            textBoxSearch = new TextBox();
+            buttonSearchLeft = new Button();
+            flowLayoutPanel2 = new FlowLayoutPanel();
+            textBoxPosition = new TextBox();
             timer = new System.Windows.Forms.Timer(components);
             contextMenuStrip.SuspendLayout();
             tableLayoutPanel1.SuspendLayout();
             tableLayoutPanel2.SuspendLayout();
-            flowLayoutPanel1.SuspendLayout();
             flowLayoutPanel2.SuspendLayout();
-            flowLayoutPanel3.SuspendLayout();
             SuspendLayout();
             // 
             // contextMenuStrip
@@ -168,7 +168,7 @@
             // 
             // optionsToolStripMenuItem
             // 
-            optionsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { topMostToolStripMenuItem, defaultFontToolStripMenuItem, autorunToolStripMenuItem });
+            optionsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { topMostToolStripMenuItem, defaultFontToolStripMenuItem, autorunToolStripMenuItem, colorsToolStripMenuItem });
             optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
             optionsToolStripMenuItem.Size = new Size(130, 24);
             optionsToolStripMenuItem.Text = "Options";
@@ -193,6 +193,34 @@
             autorunToolStripMenuItem.Size = new Size(158, 24);
             autorunToolStripMenuItem.Text = "Autorun";
             autorunToolStripMenuItem.Click += autorunToolStripMenuItem_Click;
+            // 
+            // colorsToolStripMenuItem
+            // 
+            colorsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { setTodoColorToolStripMenuItem, setDoneColorToolStripMenuItem, setDeleteColorToolStripMenuItem });
+            colorsToolStripMenuItem.Name = "colorsToolStripMenuItem";
+            colorsToolStripMenuItem.Size = new Size(158, 24);
+            colorsToolStripMenuItem.Text = "Colors";
+            // 
+            // setTodoColorToolStripMenuItem
+            // 
+            setTodoColorToolStripMenuItem.Name = "setTodoColorToolStripMenuItem";
+            setTodoColorToolStripMenuItem.Size = new Size(183, 24);
+            setTodoColorToolStripMenuItem.Text = "Set todo color";
+            setTodoColorToolStripMenuItem.Click += setTodoColorToolStripMenuItem_Click;
+            // 
+            // setDoneColorToolStripMenuItem
+            // 
+            setDoneColorToolStripMenuItem.Name = "setDoneColorToolStripMenuItem";
+            setDoneColorToolStripMenuItem.Size = new Size(183, 24);
+            setDoneColorToolStripMenuItem.Text = "Set done color";
+            setDoneColorToolStripMenuItem.Click += setDoneColorToolStripMenuItem_Click;
+            // 
+            // setDeleteColorToolStripMenuItem
+            // 
+            setDeleteColorToolStripMenuItem.Name = "setDeleteColorToolStripMenuItem";
+            setDeleteColorToolStripMenuItem.Size = new Size(183, 24);
+            setDeleteColorToolStripMenuItem.Text = "Set delete color";
+            setDeleteColorToolStripMenuItem.Click += setDeleteColorToolStripMenuItem_Click;
             // 
             // showToolStripMenuItem
             // 
@@ -224,6 +252,7 @@
             // 
             // tableLayoutPanel1
             // 
+            tableLayoutPanel1.BackColor = Color.Transparent;
             tableLayoutPanel1.ColumnCount = 1;
             tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             tableLayoutPanel1.Controls.Add(richTextBoxNote, 0, 0);
@@ -233,8 +262,9 @@
             tableLayoutPanel1.Name = "tableLayoutPanel1";
             tableLayoutPanel1.RowCount = 2;
             tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 70F));
-            tableLayoutPanel1.Size = new Size(1643, 616);
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 63F));
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
+            tableLayoutPanel1.Size = new Size(1238, 616);
             tableLayoutPanel1.TabIndex = 10;
             // 
             // richTextBoxNote
@@ -249,77 +279,178 @@
             richTextBoxNote.Location = new Point(4, 4);
             richTextBoxNote.Margin = new Padding(4);
             richTextBoxNote.Name = "richTextBoxNote";
-            richTextBoxNote.Size = new Size(1635, 538);
+            richTextBoxNote.Size = new Size(1230, 545);
             richTextBoxNote.TabIndex = 5;
             richTextBoxNote.Text = "";
             richTextBoxNote.LinkClicked += richTextBoxNote_LinkClicked;
             richTextBoxNote.TextChanged += richTextBoxNote_TextChanged;
+            richTextBoxNote.KeyDown += richTextBoxNote_KeyDown;
             richTextBoxNote.MouseDown += richTextBoxNote_MouseDown;
             // 
             // tableLayoutPanel2
             // 
-            tableLayoutPanel2.ColumnCount = 3;
+            tableLayoutPanel2.BackColor = Color.Transparent;
+            tableLayoutPanel2.ColumnCount = 11;
             tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 250F));
+            tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50F));
             tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 522F));
-            tableLayoutPanel2.Controls.Add(flowLayoutPanel1, 1, 0);
+            tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50F));
+            tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50F));
+            tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50F));
+            tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70F));
+            tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50F));
+            tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50F));
+            tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50F));
+            tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70F));
+            tableLayoutPanel2.Controls.Add(buttonSkipRight, 10, 0);
+            tableLayoutPanel2.Controls.Add(buttonRight, 9, 0);
+            tableLayoutPanel2.Controls.Add(buttonAdd, 8, 0);
+            tableLayoutPanel2.Controls.Add(buttonLeft, 7, 0);
+            tableLayoutPanel2.Controls.Add(buttonSkipLeft, 6, 0);
+            tableLayoutPanel2.Controls.Add(buttonDone, 5, 0);
+            tableLayoutPanel2.Controls.Add(buttonDelete, 4, 0);
+            tableLayoutPanel2.Controls.Add(buttonSearchRight, 3, 0);
+            tableLayoutPanel2.Controls.Add(textBoxSearch, 2, 0);
+            tableLayoutPanel2.Controls.Add(buttonSearchLeft, 1, 0);
             tableLayoutPanel2.Controls.Add(flowLayoutPanel2, 0, 0);
-            tableLayoutPanel2.Controls.Add(flowLayoutPanel3, 2, 0);
             tableLayoutPanel2.Dock = DockStyle.Fill;
-            tableLayoutPanel2.Location = new Point(3, 549);
+            tableLayoutPanel2.Location = new Point(3, 556);
             tableLayoutPanel2.Name = "tableLayoutPanel2";
             tableLayoutPanel2.RightToLeft = RightToLeft.No;
             tableLayoutPanel2.RowCount = 1;
             tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
-            tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
-            tableLayoutPanel2.Size = new Size(1637, 64);
+            tableLayoutPanel2.Size = new Size(1232, 57);
             tableLayoutPanel2.TabIndex = 3;
             // 
-            // flowLayoutPanel1
+            // buttonSkipRight
             // 
-            flowLayoutPanel1.Controls.Add(buttonSearchRight);
-            flowLayoutPanel1.Controls.Add(textBoxSearch);
-            flowLayoutPanel1.Controls.Add(buttonSearchLeft);
-            flowLayoutPanel1.Dock = DockStyle.Fill;
-            flowLayoutPanel1.FlowDirection = FlowDirection.RightToLeft;
-            flowLayoutPanel1.Location = new Point(253, 3);
-            flowLayoutPanel1.Name = "flowLayoutPanel1";
-            flowLayoutPanel1.Size = new Size(859, 58);
-            flowLayoutPanel1.TabIndex = 15;
+            buttonSkipRight.BackColor = Color.FromArgb(192, 255, 192);
+            buttonSkipRight.FlatStyle = FlatStyle.Flat;
+            buttonSkipRight.Font = new Font("Consolas", 24F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            buttonSkipRight.Location = new Point(1165, 3);
+            buttonSkipRight.Name = "buttonSkipRight";
+            buttonSkipRight.Size = new Size(64, 46);
+            buttonSkipRight.TabIndex = 27;
+            buttonSkipRight.Text = ">>";
+            buttonSkipRight.UseVisualStyleBackColor = false;
+            buttonSkipRight.Click += buttonSkipRight_Click;
+            // 
+            // buttonRight
+            // 
+            buttonRight.BackColor = Color.FromArgb(192, 255, 192);
+            buttonRight.FlatStyle = FlatStyle.Flat;
+            buttonRight.Font = new Font("Consolas", 24F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            buttonRight.Location = new Point(1115, 3);
+            buttonRight.Name = "buttonRight";
+            buttonRight.Size = new Size(44, 46);
+            buttonRight.TabIndex = 18;
+            buttonRight.Text = ">";
+            buttonRight.UseVisualStyleBackColor = false;
+            buttonRight.Click += buttonRight_Click;
+            // 
+            // buttonAdd
+            // 
+            buttonAdd.BackColor = Color.FromArgb(192, 255, 192);
+            buttonAdd.FlatStyle = FlatStyle.Flat;
+            buttonAdd.Font = new Font("Consolas", 24F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            buttonAdd.Location = new Point(1065, 3);
+            buttonAdd.Name = "buttonAdd";
+            buttonAdd.Size = new Size(44, 46);
+            buttonAdd.TabIndex = 19;
+            buttonAdd.Text = "+";
+            buttonAdd.UseVisualStyleBackColor = false;
+            buttonAdd.Click += buttonAdd_Click;
+            // 
+            // buttonLeft
+            // 
+            buttonLeft.BackColor = Color.FromArgb(192, 255, 192);
+            buttonLeft.FlatStyle = FlatStyle.Flat;
+            buttonLeft.Font = new Font("Consolas", 24F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            buttonLeft.Location = new Point(1015, 3);
+            buttonLeft.Name = "buttonLeft";
+            buttonLeft.Size = new Size(44, 46);
+            buttonLeft.TabIndex = 17;
+            buttonLeft.Text = "<";
+            buttonLeft.UseVisualStyleBackColor = false;
+            buttonLeft.Click += buttonLeft_Click;
+            // 
+            // buttonSkipLeft
+            // 
+            buttonSkipLeft.BackColor = Color.FromArgb(192, 255, 192);
+            buttonSkipLeft.FlatStyle = FlatStyle.Flat;
+            buttonSkipLeft.Font = new Font("Consolas", 24F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            buttonSkipLeft.Location = new Point(945, 3);
+            buttonSkipLeft.Name = "buttonSkipLeft";
+            buttonSkipLeft.Size = new Size(64, 46);
+            buttonSkipLeft.TabIndex = 20;
+            buttonSkipLeft.Text = "<<";
+            buttonSkipLeft.UseVisualStyleBackColor = false;
+            buttonSkipLeft.Click += buttonSkipLeft_Click;
+            // 
+            // buttonDone
+            // 
+            buttonDone.BackColor = Color.FromArgb(224, 224, 224);
+            buttonDone.FlatStyle = FlatStyle.Flat;
+            buttonDone.Font = new Font("Consolas", 24F);
+            buttonDone.Location = new Point(895, 3);
+            buttonDone.Name = "buttonDone";
+            buttonDone.Size = new Size(44, 46);
+            buttonDone.TabIndex = 22;
+            buttonDone.Text = "Y";
+            buttonDone.UseVisualStyleBackColor = false;
+            buttonDone.Click += buttonDone_Click;
+            // 
+            // buttonDelete
+            // 
+            buttonDelete.BackColor = Color.FromArgb(255, 192, 192);
+            buttonDelete.FlatStyle = FlatStyle.Flat;
+            buttonDelete.Font = new Font("Consolas", 24F);
+            buttonDelete.Location = new Point(845, 3);
+            buttonDelete.Name = "buttonDelete";
+            buttonDelete.Size = new Size(44, 46);
+            buttonDelete.TabIndex = 23;
+            buttonDelete.Text = "X";
+            buttonDelete.UseVisualStyleBackColor = false;
+            buttonDelete.Click += buttonDelete_Click;
             // 
             // buttonSearchRight
             // 
-            buttonSearchRight.Location = new Point(815, 3);
+            buttonSearchRight.BackColor = Color.FromArgb(192, 255, 192);
+            buttonSearchRight.FlatStyle = FlatStyle.Flat;
+            buttonSearchRight.Location = new Point(795, 3);
             buttonSearchRight.Name = "buttonSearchRight";
-            buttonSearchRight.Size = new Size(41, 48);
-            buttonSearchRight.TabIndex = 1;
+            buttonSearchRight.Size = new Size(44, 46);
+            buttonSearchRight.TabIndex = 29;
             buttonSearchRight.Text = ">";
-            buttonSearchRight.UseVisualStyleBackColor = true;
+            buttonSearchRight.UseVisualStyleBackColor = false;
             buttonSearchRight.Visible = false;
             buttonSearchRight.Click += buttonSearchRight_Click;
             // 
             // textBoxSearch
             // 
+            textBoxSearch.BackColor = Color.FromArgb(192, 255, 192);
             textBoxSearch.BorderStyle = BorderStyle.None;
+            textBoxSearch.Dock = DockStyle.Fill;
             textBoxSearch.Font = new Font("Consolas", 27.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            textBoxSearch.Location = new Point(495, 5);
+            textBoxSearch.Location = new Point(303, 5);
             textBoxSearch.Margin = new Padding(3, 5, 3, 3);
             textBoxSearch.Name = "textBoxSearch";
-            textBoxSearch.Size = new Size(314, 44);
-            textBoxSearch.TabIndex = 0;
+            textBoxSearch.Size = new Size(486, 44);
+            textBoxSearch.TabIndex = 28;
             textBoxSearch.Visible = false;
             textBoxSearch.TextChanged += textBoxSearch_TextChanged;
             textBoxSearch.KeyDown += textBoxSearch_KeyDown;
             // 
             // buttonSearchLeft
             // 
-            buttonSearchLeft.Location = new Point(442, 3);
+            buttonSearchLeft.BackColor = Color.FromArgb(192, 255, 192);
+            buttonSearchLeft.FlatStyle = FlatStyle.Flat;
+            buttonSearchLeft.Location = new Point(253, 3);
             buttonSearchLeft.Name = "buttonSearchLeft";
-            buttonSearchLeft.Size = new Size(47, 48);
-            buttonSearchLeft.TabIndex = 2;
+            buttonSearchLeft.Size = new Size(44, 46);
+            buttonSearchLeft.TabIndex = 30;
             buttonSearchLeft.Text = "<";
-            buttonSearchLeft.UseVisualStyleBackColor = true;
+            buttonSearchLeft.UseVisualStyleBackColor = false;
             buttonSearchLeft.Visible = false;
             buttonSearchLeft.Click += buttonSearchLeft_Click;
             // 
@@ -329,120 +460,21 @@
             flowLayoutPanel2.Dock = DockStyle.Fill;
             flowLayoutPanel2.Location = new Point(3, 3);
             flowLayoutPanel2.Name = "flowLayoutPanel2";
-            flowLayoutPanel2.Size = new Size(244, 58);
+            flowLayoutPanel2.Size = new Size(244, 51);
             flowLayoutPanel2.TabIndex = 16;
             // 
             // textBoxPosition
             // 
             textBoxPosition.BackColor = Color.FromArgb(192, 255, 192);
             textBoxPosition.BorderStyle = BorderStyle.None;
-            textBoxPosition.Font = new Font("Consolas", 32.25F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            textBoxPosition.Font = new Font("Consolas", 27.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
             textBoxPosition.Location = new Point(3, 3);
             textBoxPosition.Name = "textBoxPosition";
-            textBoxPosition.Size = new Size(241, 51);
-            textBoxPosition.TabIndex = 15;
+            textBoxPosition.Size = new Size(241, 44);
+            textBoxPosition.TabIndex = 21;
             textBoxPosition.Text = "0/1000";
             textBoxPosition.TextAlign = HorizontalAlignment.Center;
             textBoxPosition.KeyDown += textBoxPosition_KeyDown;
-            // 
-            // flowLayoutPanel3
-            // 
-            flowLayoutPanel3.Controls.Add(buttonSkipRight);
-            flowLayoutPanel3.Controls.Add(buttonRight);
-            flowLayoutPanel3.Controls.Add(buttonAdd);
-            flowLayoutPanel3.Controls.Add(buttonLeft);
-            flowLayoutPanel3.Controls.Add(buttonSkipLeft);
-            flowLayoutPanel3.Controls.Add(buttonDone);
-            flowLayoutPanel3.Controls.Add(buttonDelete);
-            flowLayoutPanel3.FlowDirection = FlowDirection.RightToLeft;
-            flowLayoutPanel3.Location = new Point(1118, 3);
-            flowLayoutPanel3.Name = "flowLayoutPanel3";
-            flowLayoutPanel3.Size = new Size(516, 58);
-            flowLayoutPanel3.TabIndex = 17;
-            // 
-            // buttonSkipRight
-            // 
-            buttonSkipRight.BackColor = Color.FromArgb(192, 255, 192);
-            buttonSkipRight.Font = new Font("Consolas", 24F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            buttonSkipRight.Location = new Point(451, 3);
-            buttonSkipRight.Name = "buttonSkipRight";
-            buttonSkipRight.Size = new Size(62, 53);
-            buttonSkipRight.TabIndex = 26;
-            buttonSkipRight.Text = ">>";
-            buttonSkipRight.UseVisualStyleBackColor = false;
-            buttonSkipRight.Click += buttonSkipRight_Click;
-            // 
-            // buttonRight
-            // 
-            buttonRight.BackColor = Color.FromArgb(192, 255, 192);
-            buttonRight.Font = new Font("Consolas", 24F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            buttonRight.Location = new Point(396, 3);
-            buttonRight.Name = "buttonRight";
-            buttonRight.Size = new Size(49, 53);
-            buttonRight.TabIndex = 18;
-            buttonRight.Text = ">";
-            buttonRight.UseVisualStyleBackColor = false;
-            buttonRight.Click += buttonRight_Click;
-            // 
-            // buttonAdd
-            // 
-            buttonAdd.BackColor = Color.FromArgb(192, 255, 192);
-            buttonAdd.Font = new Font("Consolas", 24F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            buttonAdd.Location = new Point(341, 3);
-            buttonAdd.Name = "buttonAdd";
-            buttonAdd.Size = new Size(49, 53);
-            buttonAdd.TabIndex = 19;
-            buttonAdd.Text = "+";
-            buttonAdd.UseVisualStyleBackColor = false;
-            buttonAdd.Click += buttonAdd_Click;
-            // 
-            // buttonLeft
-            // 
-            buttonLeft.BackColor = Color.FromArgb(192, 255, 192);
-            buttonLeft.Font = new Font("Consolas", 24F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            buttonLeft.Location = new Point(286, 3);
-            buttonLeft.Name = "buttonLeft";
-            buttonLeft.Size = new Size(49, 53);
-            buttonLeft.TabIndex = 17;
-            buttonLeft.Text = "<";
-            buttonLeft.UseVisualStyleBackColor = false;
-            buttonLeft.Click += buttonLeft_Click;
-            // 
-            // buttonSkipLeft
-            // 
-            buttonSkipLeft.BackColor = Color.FromArgb(192, 255, 192);
-            buttonSkipLeft.Font = new Font("Consolas", 24F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            buttonSkipLeft.Location = new Point(218, 3);
-            buttonSkipLeft.Name = "buttonSkipLeft";
-            buttonSkipLeft.Size = new Size(62, 53);
-            buttonSkipLeft.TabIndex = 20;
-            buttonSkipLeft.Text = "<<";
-            buttonSkipLeft.UseVisualStyleBackColor = false;
-            buttonSkipLeft.Click += buttonSkipLeft_Click;
-            // 
-            // buttonDone
-            // 
-            buttonDone.BackColor = Color.FromArgb(224, 224, 224);
-            buttonDone.Font = new Font("Consolas", 24F);
-            buttonDone.Location = new Point(150, 3);
-            buttonDone.Name = "buttonDone";
-            buttonDone.Size = new Size(62, 53);
-            buttonDone.TabIndex = 22;
-            buttonDone.Text = "Y";
-            buttonDone.UseVisualStyleBackColor = false;
-            buttonDone.Click += buttonDone_Click;
-            // 
-            // buttonDelete
-            // 
-            buttonDelete.BackColor = Color.FromArgb(255, 192, 192);
-            buttonDelete.Font = new Font("Consolas", 24F);
-            buttonDelete.Location = new Point(82, 3);
-            buttonDelete.Name = "buttonDelete";
-            buttonDelete.Size = new Size(62, 53);
-            buttonDelete.TabIndex = 23;
-            buttonDelete.Text = "X";
-            buttonDelete.UseVisualStyleBackColor = false;
-            buttonDelete.Click += buttonDelete_Click;
             // 
             // timer
             // 
@@ -456,7 +488,7 @@
             AutoScaleDimensions = new SizeF(12F, 24F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(128, 255, 128);
-            ClientSize = new Size(1663, 636);
+            ClientSize = new Size(1258, 636);
             Controls.Add(tableLayoutPanel1);
             Font = new Font("Consolas", 15.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
             Icon = (Icon)resources.GetObject("$this.Icon");
@@ -469,6 +501,7 @@
             TopMost = true;
             FormClosed += FormFlowToDo_FormClosed;
             Load += FormFlowToDo_Load;
+            Shown += FormFlowToDo_Shown;
             DragDrop += FormFlowToDo_DragDrop;
             DragEnter += FormFlowToDo_DragEnter;
             KeyDown += FormFlowToDo_KeyDown;
@@ -476,11 +509,9 @@
             contextMenuStrip.ResumeLayout(false);
             tableLayoutPanel1.ResumeLayout(false);
             tableLayoutPanel2.ResumeLayout(false);
-            flowLayoutPanel1.ResumeLayout(false);
-            flowLayoutPanel1.PerformLayout();
+            tableLayoutPanel2.PerformLayout();
             flowLayoutPanel2.ResumeLayout(false);
             flowLayoutPanel2.PerformLayout();
-            flowLayoutPanel3.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -490,14 +521,12 @@
         private ToolStripMenuItem closeToolStripMenuItem;
         private TableLayoutPanel tableLayoutPanel1;
         private TableLayoutPanel tableLayoutPanel2;
-        private FlowLayoutPanel flowLayoutPanel1;
         private Button buttonLeft;
         private Button buttonDelete;
         private Button buttonDone;
         private Button buttonSkipLeft;
         private Button buttonAdd;
         private FlowLayoutPanel flowLayoutPanel2;
-        private TextBox textBoxPosition;
         private ToolStripMenuItem fileToolStripMenuItem;
         private ToolStripMenuItem saveToolStripMenuItem;
         private ToolStripMenuItem saveAsToolStripMenuItem;
@@ -519,11 +548,15 @@
         private System.Windows.Forms.Timer timer;
         private ToolStripMenuItem newToolStripMenuItem;
         private ToolStripMenuItem autorunToolStripMenuItem;
-        private Button buttonSearchRight;
-        private TextBox textBoxSearch;
-        private Button buttonSearchLeft;
-        private FlowLayoutPanel flowLayoutPanel3;
-        private Button buttonSkipRight;
         private Button buttonRight;
+        private ToolStripMenuItem colorsToolStripMenuItem;
+        private ToolStripMenuItem setTodoColorToolStripMenuItem;
+        private ToolStripMenuItem setDoneColorToolStripMenuItem;
+        private ToolStripMenuItem setDeleteColorToolStripMenuItem;
+        private TextBox textBoxPosition;
+        private Button buttonSkipRight;
+        private TextBox textBoxSearch;
+        private Button buttonSearchRight;
+        private Button buttonSearchLeft;
     }
 }

@@ -18,6 +18,37 @@ function Copy-WithFullPath {
 
 ########################################
 
+function New-SHA256Checksum {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$FilePath
+    )
+
+    if (-not (Test-Path -Path $FilePath -PathType Leaf)) {
+        throw "Súbor nenájdený: $FilePath"
+    }
+
+    # Vypočíta hash, prevedie na lowercase hex
+    $h = Get-FileHash -Path $FilePath -Algorithm SHA256
+    $hex = $h.Hash.ToLower()
+
+    # Iba názov súboru (bez cesty), tak ako to očakáva .SHA256 súbor
+    $fileName = [System.IO.Path]::GetFileName($FilePath)
+
+    # Výstupný súbor: pôvodná cesta + .SHA256
+    $outPath = "$FilePath.SHA256"
+
+    # Dve medzery medzi hashom a názvom súboru
+    $line = "{0}  {1}" -f $hex, $fileName
+
+    # Uložíme v ASCII (kompatibilné)
+    $line | Out-File -FilePath $outPath -Encoding Ascii -Force
+
+    return $outPath
+}
+
+########################################
+
 $CERT_STRONG_NAME = $env:CERT_STRONG_NAME
 Write-Host "CERT_STRONG_NAME=>$CERT_STRONG_NAME<"
 
@@ -66,17 +97,16 @@ Write-Output "################## VERSION $version"
 
 
 $exeFiles = Get-ChildItem -Path Output -Filter *.exe -Recurse -File
-foreach ($file in $exeFiles) {        
+foreach ($file in $exeFiles) {
     $TARGET=$file.FullName
     Write-Output "################## SUBSCRIBE PACKAGE $TARGET"
     & $signtoolPath sign /fd SHA256 /f "$CERT_CODE" /p $CERT_PWD /tr http://timestamp.digicert.com /td sha256 /v "$TARGET"
     Write-Output "################## SUBSCRIBE VERIFY"
     & $signtoolPath verify /pa /v "$TARGET"
     Write-Output "################## CREATE PACKAGE HASH"
-    $hash = Get-FileHash -Path $TARGET -Algorithm SHA256
-    $hash.Hash | Out-File -FilePath "$TARGET.SHA256"
+    # $hash = Get-FileHash -Path $TARGET -Algorithm SHA256
+    # $hash.Hash | Out-File -FilePath "$TARGET.SHA256"
+    New-SHA256Checksum -FilePath $TARGET
 }
-
-
 
 Read-Host "Press Enter to continue"

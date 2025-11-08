@@ -1,9 +1,14 @@
+using FlowToDo.Src.Forms;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Xml.Serialization;
+using static System.Net.Mime.MediaTypeNames;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 
 namespace FlowToDo
@@ -12,22 +17,21 @@ namespace FlowToDo
     {
         public Data data = new Data();
 
-        public string pathToFlowToDoFile = "";
+        public string? pathToFlowToDoFile = "";
         private bool inicialized = false;
 
         private bool showNormal = true;
         private bool showDone = false;
         private bool showDeleted = false;
 
-        public Color TodoColor = Color.FromArgb(128, 255, 128);
-        public Color DoneColor = Color.FromArgb(222, 222, 222);
-        public Color DeletedColor = Color.FromArgb(255, 224, 108);
-
         public bool saved = true;
         public bool suspenUnsave = false;
         public DateTime unSavedAt = DateTime.Now;
-        public string unmodifiedText = "";
-        public Font defaultRitchTextFont = null;
+        public string? unmodifiedText = "";
+        public System.Drawing.Font? defaultRitchTextFont = null;
+
+        private DateTime? nextBackup = null;
+
 
         [DllImport("user32.dll")]
         private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
@@ -48,13 +52,10 @@ namespace FlowToDo
 
             if (filePath == "" || !File.Exists(filePath))
             {
-                string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                string appDir = Path.Combine(appDataPath, Program.appName);
-                Directory.CreateDirectory(appDir);
-                string defaultFlowTodoFile = Path.Combine(appDir, Program.mainConfigFile);
-                if (this.OpenFile(defaultFlowTodoFile))
+
+                if (this.OpenFile(Program.defaultFlowTodoFile))
                 {
-                    this.pathToFlowToDoFile = defaultFlowTodoFile;
+                    this.pathToFlowToDoFile = Program.defaultFlowTodoFile;
                 }
                 else
                 {
@@ -77,44 +78,49 @@ namespace FlowToDo
         /******************************************************************************************/
 
         // FILE OPEN
-        public bool OpenFile(string filePath)
+        public bool OpenFile(string? filePath)
         {
             inicialized = false;
             if (filePath != "" && File.Exists(filePath))
             {
+                bool createdNew;
+                string mutexName = "Global\\" + Program.appName + " " + filePath
+                .Replace("\\", "_")
+                .Replace(":", "_")
+                .Replace("/", "_");
+
+                Mutex? mutex = new Mutex(true, mutexName, out createdNew);
+                if (!createdNew)
+                {
+                    mutex.ReleaseMutex();
+                    mutex = null;
+                    return false;
+                }
+
                 try
                 {
-
-                    bool createdNew;
-                    string mutexName = "Global\\" + Program.appName + " " + filePath
-                    .Replace("\\", "_")
-                    .Replace(":", "_")
-                    .Replace("/", "_");
-
-                    Mutex? mutex = new Mutex(true, mutexName, out createdNew);
-                    if (!createdNew)
-                    {
-                        mutex.ReleaseMutex();
-                        mutex = null;
-                        return false;
-                    }
-
                     var serializer = new XmlSerializer(typeof(Data));
                     string xml = File.ReadAllText(filePath);
                     using var sr = new StringReader(xml);
-                    this.data = (Data)serializer.Deserialize(sr);
+                    Data? data = (Data?)serializer.Deserialize(sr);
+                    if (data == null)
+                    {
+                        return false;
+                    }
+
+                    this.data = data;
                     this.saved = true;
                     this.pathToFlowToDoFile = filePath;
 
-                    this.richTextBoxNote.Font = Tools.StringToFont(data.defaultFont);
+                    this.richTextBoxNote.Font = Tools.StringToFont(this.data.defaultFont);
 
                     if (0 <= this.data.currentTodoPos && this.data.currentTodoPos < data.todoList.Count())
                     {
-                        data.currentTodo = data.todoList[this.data.currentTodoPos];
+                        this.data.currentTodo = data.todoList[this.data.currentTodoPos];
                     }
                     else
                     {
-                        data.currentTodo = data.todoList[data.todoList.Count() - 1];
+                        this.data.currentTodo = this.data.todoList[data.todoList.Count() - 1];
                     }
 
                     SelectTodo(this.data.currentTodo);
@@ -127,6 +133,10 @@ namespace FlowToDo
                     this.Height = data.winH;
                     this.Width = data.winW;
 
+                    nextBackup = DateTime.Now.AddHours(1);
+
+                    this.getTimeEvents();
+
                     if (Program.mutex != null)
                     {
                         Program.mutex.ReleaseMutex();
@@ -138,6 +148,7 @@ namespace FlowToDo
                 }
                 catch (Exception)
                 {
+                    mutex.ReleaseMutex();
                     return false;
                 }
 
@@ -148,13 +159,23 @@ namespace FlowToDo
         }
 
         // FILE SAVE
-        public void SaveFile()
+        public void SaveFile(string? path = null)
         {
+            if (data == null)
+            {
+                return;
+            }
+
+            if (path == null)
+            {
+                path = this.pathToFlowToDoFile;
+            }
+
             this.textSaveToToDo();
 
             removeEmptyTodoList();
 
-            if (this.pathToFlowToDoFile == "")
+            if (path == "")
             {
                 this.saveAsToolStripMenuItem_Click(null, null);
                 return;
@@ -164,22 +185,25 @@ namespace FlowToDo
             {
                 if (this.WindowState == FormWindowState.Normal)
                 {
-                    data.winX = this.Left;
-                    data.winY = this.Top;
-                    data.winH = this.Height;
-                    data.winW = this.Width;
+                    this.data.winX = this.Left;
+                    this.data.winY = this.Top;
+                    this.data.winH = this.Height;
+                    this.data.winW = this.Width;
                 }
-                if (this.WindowState == FormWindowState.Maximized) data.winStatus = 2;
-                if (this.WindowState == FormWindowState.Minimized) data.winStatus = 1;
-                if (this.WindowState == FormWindowState.Normal) data.winStatus = 0;
-                data.TopMost = this.TopMost;
-                data.defaultFont = Tools.FontToString(this.richTextBoxNote.Font);
-                data.currentTodoPos = this.currentTodoPos();
+                if (this.WindowState == FormWindowState.Maximized) this.data.winStatus = 2;
+                if (this.WindowState == FormWindowState.Minimized) this.data.winStatus = 1;
+                if (this.WindowState == FormWindowState.Normal) this.data.winStatus = 0;
+                this.data.TopMost = this.TopMost;
+                this.data.defaultFont = Tools.FontToString(this.richTextBoxNote.Font);
+                this.data.currentTodoPos = this.currentTodoPos();
                 var serializer = new XmlSerializer(typeof(Data));
                 using var sw = new StringWriter();
-                serializer.Serialize(sw, data);
+                serializer.Serialize(sw, this.data);
                 string xml = sw.ToString();
-                File.WriteAllText(this.pathToFlowToDoFile, xml);
+                if (path != null)
+                {
+                    File.WriteAllText(path, xml);
+                }
                 this.saved = true;
             }
             catch (Exception)
@@ -212,15 +236,32 @@ namespace FlowToDo
 
         }
 
+        // EVENT FORM SHOWN
+        private void FormFlowToDo_Shown(object sender, EventArgs e)
+        {
+            this.richTextBoxNote.Focus();
+        }
+
         // EVENT FORM RESIZE
         private void FormFlowToDo_Resize(object sender, EventArgs e)
         {
+            if (this.textBoxSearch.Visible)
+            {
+                int newWidth = this.Width - 500 - 300;
+                this.textBoxSearch.Width = newWidth > 100 ? newWidth : 100;
+            }
+
+            if (this.data == null)
+            {
+                return;
+            }
+
             if (inicialized && this.WindowState == FormWindowState.Normal)
             {
-                data.winX = this.Left;
-                data.winY = this.Top;
-                data.winH = this.Height;
-                data.winW = this.Width;
+                this.data.winX = this.Left;
+                this.data.winY = this.Top;
+                this.data.winH = this.Height;
+                this.data.winW = this.Width;
             }
         }
 
@@ -230,7 +271,7 @@ namespace FlowToDo
             if (e.Control && e.KeyCode == Keys.S)
             {
                 e.SuppressKeyPress = true;
-                this.SaveFile();
+                this.saveToolStripMenuItem_Click(null, null);
             }
 
             if (e.Control && e.Shift && e.KeyCode == Keys.S)
@@ -302,47 +343,52 @@ namespace FlowToDo
         }
 
         // EVENT DRAG ENTER
-        private void FormFlowToDo_DragEnter(object sender, DragEventArgs e)
+        private void FormFlowToDo_DragEnter(object? sender, DragEventArgs? e)
         {
             if (!inicialized)
             {
                 return;
             }
 
-
-            bool hasContent = false;
-            try
+            if (e != null && e.Data != null)
             {
+                bool hasContent = false;
+                try
+                {
+                    if (e.Data.GetData(DataFormats.FileDrop) != null)
+                        hasContent = true;
+                    else if (e.Data.GetData(DataFormats.Text) != null)
+                        hasContent = true;
+                    else if (e.Data.GetData(DataFormats.UnicodeText) != null)
+                        hasContent = true;
+                    else if (e.Data.GetData(DataFormats.Html) != null)
+                        hasContent = true;
+
+                }
+                catch (Exception)
+                {
 
 
-                if (e.Data.GetData(DataFormats.FileDrop) != null)
-                    hasContent = true;
-                else if (e.Data.GetData(DataFormats.Text) != null)
-                    hasContent = true;
-                else if (e.Data.GetData(DataFormats.UnicodeText) != null)
-                    hasContent = true;
-                else if (e.Data.GetData(DataFormats.Html) != null)
-                    hasContent = true;
+                }
 
-            }
-            catch (Exception)
-            {
+                e.Effect = DragDropEffects.None;
 
-
-            }
-
-            e.Effect = DragDropEffects.None;
-
-            if (hasContent)
-            {
-                e.Effect = DragDropEffects.Copy;
+                if (hasContent)
+                {
+                    e.Effect = DragDropEffects.Copy;
+                }
             }
         }
 
         // EVENT DRAG DROP
-        private void FormFlowToDo_DragDrop(object sender, DragEventArgs e)
+        private void FormFlowToDo_DragDrop(object? sender, DragEventArgs? e)
         {
             if (!inicialized)
+            {
+                return;
+            }
+
+            if (e == null || e.Data == null)
             {
                 return;
             }
@@ -355,22 +401,22 @@ namespace FlowToDo
             {
                 if (e.Data.GetData(DataFormats.FileDrop) != null)
                 {
-                    files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                    files = (string[]?)e.Data.GetData(DataFormats.FileDrop);
                 }
 
                 if (e.Data.GetData(DataFormats.Text) != null)
                 {
-                    text = (string)e.Data.GetData(DataFormats.Text);
+                    text = (string?)e.Data.GetData(DataFormats.Text);
                 }
 
                 if (e.Data.GetData(DataFormats.UnicodeText) != null)
                 {
-                    text = (string)e.Data.GetData(DataFormats.UnicodeText);
+                    text = (string?)e.Data.GetData(DataFormats.UnicodeText);
                 }
 
                 if (e.Data.GetData(DataFormats.Html) != null)
                 {
-                    html = (string)e.Data.GetData(DataFormats.Html);
+                    html = (string?)e.Data.GetData(DataFormats.Html);
                 }
             }
             catch (Exception)
@@ -409,12 +455,30 @@ namespace FlowToDo
 
         /******************************************************************************************/
 
+        // TOOL MAKE BACKUP 
+        public void makeBackup()
+        {
+            long unixTimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            this.SaveFile(Path.Combine(Program.backupDir, "backup-" + unixTimestampMs.ToString() + Program.defaultExtension));
+        }
+
         // TIMER TICK
         private void timer_Tick(object sender, EventArgs e)
         {
             if (!saved && DateTime.Now - unSavedAt > TimeSpan.FromMinutes(1))
             {
                 this.SaveFile();
+            }
+
+            if (nextBackup != null && DateTime.Now >= this.nextBackup)
+            {
+                nextBackup = DateTime.Now.AddHours(1);
+                makeBackup();
+            }
+
+            if (this.data.nextEvent != null && DateTime.Now >= this.data.nextEvent.time) {
+                Notifications.Show(this.data.nextEvent.name);
+                this.getTimeEvents();
             }
         }
 
@@ -423,6 +487,7 @@ namespace FlowToDo
         // RESET TO DEFAULT EMPTY STATE
         public void initTodoList()
         {
+            this.data = new Data();
             this.data.todoList.Clear();
             this.data.currentTodo = new ToDo();
             this.data.todoList.Add(this.data.currentTodo);
@@ -430,7 +495,7 @@ namespace FlowToDo
             this.saved = true;
             this.suspenUnsave = false;
             this.unSavedAt = DateTime.Now;
-            richTextBoxNote.Font = defaultRitchTextFont;
+            this.richTextBoxNote.Font = defaultRitchTextFont;
             this.richTextBoxNote.Text = this.data.currentTodo.text;
             this.unmodifiedText = this.richTextBoxNote.Rtf;
 
@@ -446,8 +511,10 @@ namespace FlowToDo
         // REMOVE EMPTY CLEANING
         public void removeEmptyTodoList()
         {
-
-            this.data.todoList.RemoveAll(x => x.isEmpty && x != this.data.currentTodo);
+            if (this.data != null)
+            {
+                this.data.todoList.RemoveAll(x => x.isEmpty && x != this.data.currentTodo);
+            }
 
             updatePager();
         }
@@ -456,6 +523,12 @@ namespace FlowToDo
         public int CountTodos()
         {
             int count = 0;
+
+            if (this.data == null)
+            {
+                return count;
+            }
+
             for (int i = 0; i < this.data.todoList.Count(); i++)
             {
                 if ((this.data.todoList[i].deleted && !showDeleted) ||
@@ -471,8 +544,13 @@ namespace FlowToDo
         }
 
         // TOOL GET TODO INDEX RELATIVE TO CATEGORY
-        public int GetPosOfTodos(ToDo todo)
+        public int GetPosOfTodos(ToDo? todo)
         {
+            if (todo == null || this.data == null)
+            {
+                return -1;
+            }
+
             int pos = this.data.todoList.IndexOf(todo);
 
             if (pos < 0)
@@ -498,7 +576,7 @@ namespace FlowToDo
         // SAVE TEXT FROM TEXTBOX TO TODO 
         public void textSaveToToDo()
         {
-            if (this.data.currentTodo != null)
+            if (this.data != null && this.data.currentTodo != null)
             {
                 if (this.unmodifiedText != this.richTextBoxNote.Rtf)
                 {
@@ -527,24 +605,33 @@ namespace FlowToDo
         // PAGER UPDATE
         public void updatePager()
         {
+            if (this.data == null || this.data.currentTodo == null)
+            {
+                this.BackColor = Color.Green;
+                this.richTextBoxNote.BackColor = this.BackColor;
+                this.textBoxPosition.Text = "";
+                return;
+            }
+
             this.textBoxPosition.Text = (this.GetPosOfTodos(this.data.currentTodo) + 1) + "/" + this.CountTodos();
+
 
             if (this.data.currentTodo != null)
             {
                 if (this.data.currentTodo.deleted)
                 {
-                    this.BackColor = this.DeletedColor;
-                    this.richTextBoxNote.BackColor = this.DeletedColor;
+                    this.BackColor = Tools.StringToColor(this.data.deletedColor, Color.Green);
+                    this.richTextBoxNote.BackColor = this.BackColor;
                 }
                 else if (this.data.currentTodo.done)
                 {
-                    this.BackColor = this.DoneColor;
-                    this.richTextBoxNote.BackColor = this.DoneColor;
+                    this.BackColor = Tools.StringToColor(this.data.doneColor, Color.Gray);
+                    this.richTextBoxNote.BackColor = this.BackColor;
                 }
                 else
                 {
-                    this.BackColor = this.TodoColor;
-                    this.richTextBoxNote.BackColor = this.TodoColor;
+                    this.BackColor = Tools.StringToColor(this.data.todoColor, Color.Green);
+                    this.richTextBoxNote.BackColor = this.BackColor;
                 }
             }
         }
@@ -552,7 +639,12 @@ namespace FlowToDo
         // TOOL GET PREV TODO
         public ToDo? GetPrevTodo()
         {
-            ToDo prevTodo = null;
+            if (this.data == null)
+            {
+                return null;
+            }
+
+            ToDo? prevTodo = null;
 
             for (int i = this.currentTodoPos() - 1; i >= 0; i--)
             {
@@ -572,7 +664,12 @@ namespace FlowToDo
         // TOOL GET NEXT TODO
         public ToDo? GetNextTodo()
         {
-            ToDo nextTodo = null;
+            if (this.data == null)
+            {
+                return null;
+            }
+
+            ToDo? nextTodo = null;
 
             for (int i = this.currentTodoPos() + 1; i < this.data.todoList.Count(); i++)
             {
@@ -592,9 +689,12 @@ namespace FlowToDo
         // TOOL GET FIRT TODO
         public ToDo? GetFirstTodo()
         {
+            if (this.data == null)
+            {
+                return null;
+            }
 
-
-            ToDo prevTodo = null;
+            ToDo? prevTodo = null;
 
             for (int i = this.currentTodoPos() - 1; i >= 0; i--)
             {
@@ -611,9 +711,14 @@ namespace FlowToDo
         }
 
         // TOOL GET LAST TODO
-        public ToDo GetLastTodo()
+        public ToDo? GetLastTodo()
         {
-            ToDo nextTodo = null;
+            if (this.data == null)
+            {
+                return null;
+            }
+
+            ToDo? nextTodo = null;
 
             for (int i = this.currentTodoPos() + 1; i < this.data.todoList.Count(); i++)
             {
@@ -630,35 +735,44 @@ namespace FlowToDo
         }
 
         // TOOL SET TODO AS ACTUAL
-        public void SelectTodo(ToDo todo)
+        public void SelectTodo(ToDo? todo)
         {
+            if (this.data == null)
+            {
+                return;
+            }
+
             suspenUnsave = true;
             if (todo != null)
             {
                 int position = this.data.todoList.IndexOf(todo);
                 if (position > -1)
                 {
+
                     this.data.currentTodo = todo;
-                    if (this.data.currentTodo.text.TrimStart().StartsWith(@"{\rtf", StringComparison.OrdinalIgnoreCase))
+                    if (this.data != null && this.data.currentTodo != null && this.data.currentTodo.text != null)
                     {
-                        try
+                        if (this.data.currentTodo.text.TrimStart().StartsWith(@"{\rtf", StringComparison.OrdinalIgnoreCase))
                         {
-                            this.richTextBoxNote.Rtf = this.data.currentTodo.text;
-                            this.unmodifiedText = this.richTextBoxNote.Rtf;
-                            HighlightFilePaths();
+                            try
+                            {
+                                this.richTextBoxNote.Rtf = this.data.currentTodo.text;
+                                this.unmodifiedText = this.richTextBoxNote.Rtf;
+                                HighlightFilePaths();
+                            }
+                            catch
+                            {
+                                this.richTextBoxNote.Text = this.data.currentTodo.text;
+                                this.unmodifiedText = this.richTextBoxNote.Rtf;
+                                HighlightFilePaths();
+                            }
                         }
-                        catch
+                        else
                         {
                             this.richTextBoxNote.Text = this.data.currentTodo.text;
                             this.unmodifiedText = this.richTextBoxNote.Rtf;
                             HighlightFilePaths();
                         }
-                    }
-                    else
-                    {
-                        this.richTextBoxNote.Text = this.data.currentTodo.text;
-                        this.unmodifiedText = this.richTextBoxNote.Rtf;
-                        HighlightFilePaths();
                     }
 
                 }
@@ -670,9 +784,14 @@ namespace FlowToDo
         }
 
         // TOOL GO TO NODE BY INDEX (SKIP DONE AND DELETED)
-        public ToDo selectTodoByNumber(int pos)
+        public ToDo? getTodoByNumber(int pos)
         {
-            ToDo selectedTodo = null;
+            if (this.data == null)
+            {
+                return null;
+            }
+
+            ToDo? selectedTodo = null;
             int currentPos = -1;
             for (int i = 0; i < this.data.todoList.Count(); i++)
             {
@@ -697,7 +816,7 @@ namespace FlowToDo
         // TOOL GET CURRENT TODO POSITION
         public int currentTodoPos()
         {
-            if (this.data.currentTodo == null)
+            if (this.data == null || this.data.currentTodo == null)
             {
                 return -1;
             }
@@ -705,26 +824,37 @@ namespace FlowToDo
             return this.data.todoList.IndexOf(this.data.currentTodo);
         }
 
-        // BUTTON  +
+        /******************************************************************************************/
+
+        // TOOLBAR BUTTON  +
         private void buttonAdd_Click(object sender, EventArgs e)
         {
+            if (this.data == null)
+            {
+                return;
+            }
+
             this.textSaveToToDo();
 
-            ToDo todo = new ToDo();            
+            ToDo todo = new ToDo();
             int index = this.currentTodoPos();
             this.data.currentTodo = todo;
             this.data.currentTodo.createdAt = Tools.Timestamp();
-            this.data.todoList.Insert(index, todo);
+            this.data.todoList.Insert(index + 1, todo);
             this.richTextBoxNote.Rtf = this.data.currentTodo.text;
             this.unsave();
             updatePager();
         }
 
-        // BUTTON DELETE
+        // TOOLBAR BUTTON DELETE
         private void buttonDelete_Click(object sender, EventArgs e)
         {
             this.textSaveToToDo();
 
+            if (this.data == null || this.data.currentTodo == null)
+            {
+                return;
+            }
 
             if (this.data.currentTodo.deleted)
             {
@@ -739,7 +869,7 @@ namespace FlowToDo
                 this.data.currentTodo.deletedAt = Tools.Timestamp();
                 this.unsave();
 
-                ToDo nextTodo = GetNextTodo();
+                ToDo? nextTodo = GetNextTodo();
                 if (nextTodo == null)
                 {
                     nextTodo = GetPrevTodo();
@@ -749,12 +879,12 @@ namespace FlowToDo
             }
         }
 
-        // BUTTON DONE
+        // TOOLBAR BUTTON DONE
         private void buttonDone_Click(object sender, EventArgs e)
         {
             this.textSaveToToDo();
 
-            if (!this.data.currentTodo.deleted)
+            if (this.data != null && this.data.currentTodo != null && !this.data.currentTodo.deleted)
             {
                 if (this.data.currentTodo.done)
                 {
@@ -769,7 +899,7 @@ namespace FlowToDo
                     this.data.currentTodo.doneAt = Tools.Timestamp();
                     this.unsave();
 
-                    ToDo nextTodo = GetNextTodo();
+                    ToDo? nextTodo = GetNextTodo();
                     if (nextTodo == null)
                     {
                         nextTodo = GetPrevTodo();
@@ -779,108 +909,138 @@ namespace FlowToDo
             }
         }
 
-        // BUTTON >
+        // TOOLBAR BUTTON >
         private void buttonRight_Click(object sender, EventArgs e)
         {
-            this.textSaveToToDo();
+            if (this.data == null)
+            {
+                return;
+            }
 
+            this.textSaveToToDo();
 
             if (ModifierKeys.HasFlag(Keys.Shift))
             {
-                ToDo nextTodo = GetNextTodo();
-                int indexNext = this.data.todoList.IndexOf(nextTodo);
-
-                int index = this.data.todoList.IndexOf(this.data.currentTodo);
-                if (index != -1 && indexNext != -1 && index != indexNext)
+                ToDo? nextTodo = GetNextTodo();
+                if (nextTodo != null && this.data.currentTodo != null)
                 {
-                    var temp = this.data.todoList[indexNext];
-                    this.data.todoList[indexNext] = this.data.todoList[index];
-                    this.data.todoList[index] = temp;
-                    this.unsave();
-                    updatePager();
+                    int indexNext = this.data.todoList.IndexOf(nextTodo);
+
+                    int index = this.data.todoList.IndexOf(this.data.currentTodo);
+                    if (index != -1 && indexNext != -1 && index != indexNext)
+                    {
+                        var temp = this.data.todoList[indexNext];
+                        this.data.todoList[indexNext] = this.data.todoList[index];
+                        this.data.todoList[index] = temp;
+                        this.unsave();
+                        updatePager();
+                    }
                 }
 
             }
             else
             {
-                ToDo nextTodo = GetNextTodo();
+                ToDo? nextTodo = GetNextTodo();
                 this.SelectTodo(nextTodo);
             }
         }
 
-        // BUTTON <
+        // TOOLBAR BUTTON <
         private void buttonLeft_Click(object sender, EventArgs e)
         {
+            if (this.data == null)
+            {
+                return;
+            }
+
             this.textSaveToToDo();
 
             if (ModifierKeys.HasFlag(Keys.Shift))
             {
-                ToDo prevTodo = GetPrevTodo();
-                int indexPrev = this.data.todoList.IndexOf(prevTodo);
-
-                int index = this.data.todoList.IndexOf(this.data.currentTodo);
-                if (index != -1 && indexPrev != -1 && index != indexPrev)
+                ToDo? prevTodo = GetPrevTodo();
+                if (prevTodo != null && this.data.currentTodo != null)
                 {
-                    var temp = this.data.todoList[indexPrev];
-                    this.data.todoList[indexPrev] = this.data.todoList[index];
-                    this.data.todoList[index] = temp;
-                    this.unsave();
-                    updatePager();
+                    int indexPrev = this.data.todoList.IndexOf(prevTodo);
+
+                    int index = this.data.todoList.IndexOf(this.data.currentTodo);
+                    if (index != -1 && indexPrev != -1 && index != indexPrev)
+                    {
+                        var temp = this.data.todoList[indexPrev];
+                        this.data.todoList[indexPrev] = this.data.todoList[index];
+                        this.data.todoList[index] = temp;
+                        this.unsave();
+                        updatePager();
+                    }
                 }
 
             }
             else
             {
-                ToDo prevTodo = GetPrevTodo();
+                ToDo? prevTodo = GetPrevTodo();
                 this.SelectTodo(prevTodo);
             }
         }
 
-        // BUTTON >>
+        // TOOLBAR BUTTON >>
         private void buttonSkipRight_Click(object sender, EventArgs e)
         {
+            if (this.data == null)
+            {
+                return;
+            }
+
             this.textSaveToToDo();
 
             if (ModifierKeys.HasFlag(Keys.Shift))
             {
-                int index = this.data.todoList.IndexOf(this.data.currentTodo);
-                if (index != -1 && index < this.data.todoList.Count - 1)
+                if (this.data.currentTodo != null)
                 {
-                    this.data.todoList.RemoveAt(index);
-                    this.data.todoList.Add(this.data.currentTodo);
-                    this.unsave();
-                    updatePager();
+                    int index = this.data.todoList.IndexOf(this.data.currentTodo);
+                    if (index != -1 && index < this.data.todoList.Count - 1)
+                    {
+                        this.data.todoList.RemoveAt(index);
+                        this.data.todoList.Add(this.data.currentTodo);
+                        this.unsave();
+                        updatePager();
+                    }
                 }
-
             }
             else
             {
-                ToDo nextTodo = GetLastTodo();
+                ToDo? nextTodo = GetLastTodo();
                 this.SelectTodo(nextTodo);
             }
 
         }
 
-        // BUTTON <<
-        private void buttonSkipLeft_Click(object sender, EventArgs e)
+        // TOOLBAR BUTTON <<
+        private void buttonSkipLeft_Click(object? sender, EventArgs? e)
         {
+            if (this.data == null)
+            {
+                return;
+            }
+
             this.textSaveToToDo();
 
             if (ModifierKeys.HasFlag(Keys.Shift))
             {
-                int index = this.data.todoList.IndexOf(this.data.currentTodo);
-                if (index != -1 && index > 0)
+                if (this.data.currentTodo != null)
                 {
-                    this.data.todoList.RemoveAt(index);
-                    this.data.todoList.Insert(0, this.data.currentTodo);
-                    this.unsave();
-                    updatePager();
+                    int index = this.data.todoList.IndexOf(this.data.currentTodo);
+                    if (index != -1 && index > 0)
+                    {
+                        this.data.todoList.RemoveAt(index);
+                        this.data.todoList.Insert(0, this.data.currentTodo);
+                        this.unsave();
+                        updatePager();
+                    }
                 }
 
             }
             else
             {
-                ToDo nextTodo = GetFirstTodo();
+                ToDo? nextTodo = GetFirstTodo();
                 this.SelectTodo(nextTodo);
             }
 
@@ -911,14 +1071,15 @@ namespace FlowToDo
         }
 
         // CONTEXTMENU FILE SAVE
-        private void saveToolStripMenuItem_Click(object sender, EventArgs e)
+        private void saveToolStripMenuItem_Click(object? sender, EventArgs? e)
         {
             this.textSaveToToDo();
             this.SaveFile();
+            this.getTimeEvents();
         }
 
         // CONTEXTMENU FILE SAVE AS
-        private void saveAsToolStripMenuItem_Click(object sender, EventArgs e)
+        private void saveAsToolStripMenuItem_Click(object? sender, EventArgs? e)
         {
             this.textSaveToToDo();
 
@@ -1061,8 +1222,15 @@ namespace FlowToDo
                 fd.Font = richTextBoxNote.SelectionFont ?? richTextBoxNote.Font;
                 if (fd.ShowDialog() == DialogResult.OK)
                 {
-                    if (richTextBoxNote.SelectionLength > 0) richTextBoxNote.SelectionFont = fd.Font;
-                    else richTextBoxNote.Font = fd.Font;
+
+                    if (richTextBoxNote.SelectionLength > 0)
+                    {
+                        richTextBoxNote.SelectionFont = fd.Font;
+                    }
+                    else
+                    {
+                        richTextBoxNote.Font = fd.Font;
+                    }
                 }
             }
 
@@ -1081,6 +1249,67 @@ namespace FlowToDo
                 Autorun.AddCurrentAppToAutorun();
             }
         }
+
+        // CONTEXTMENU OPTIONS SET COLOR TODO
+        private void setTodoColorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (this.data == null)
+            {
+                return;
+            }
+
+            using (ColorDialog colorDialog = new ColorDialog())
+            {
+                colorDialog.Color = Tools.StringToColor(this.data.todoColor, Color.Green);
+                if (colorDialog.ShowDialog() == DialogResult.OK)
+                {
+                    this.data.todoColor = Tools.ColorToString(colorDialog.Color);
+                    updatePager();
+                    this.unsave();
+                }
+            }
+        }
+
+        // CONTEXTMENU OPTIONS SET COLOR DONE
+        private void setDoneColorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (this.data == null)
+            {
+                return;
+            }
+
+            using (ColorDialog colorDialog = new ColorDialog())
+            {
+                colorDialog.Color = Tools.StringToColor(this.data.doneColor, Color.Blue);
+                if (colorDialog.ShowDialog() == DialogResult.OK)
+                {
+                    this.data.doneColor = Tools.ColorToString(colorDialog.Color);
+                    updatePager();
+                    this.unsave();
+                }
+            }
+        }
+
+        // CONTEXTMENU OPTIONS SET COLOR DELETED
+        private void setDeleteColorToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (this.data == null)
+            {
+                return;
+            }
+
+            using (ColorDialog colorDialog = new ColorDialog())
+            {
+                colorDialog.Color = Tools.StringToColor(this.data.deletedColor, Color.Red);
+                if (colorDialog.ShowDialog() == DialogResult.OK)
+                {
+                    this.data.deletedColor = Tools.ColorToString(colorDialog.Color);
+                    updatePager();
+                    this.unsave();
+                }
+            }
+        }
+        
         /******************************************************************************************/
 
         // TEXTBOX TECH CHANGE
@@ -1094,10 +1323,12 @@ namespace FlowToDo
 
         // TEXTBOX MOUSE DOWN
         private void richTextBoxNote_MouseDown(object sender, MouseEventArgs e)
-        {
+        {            
             if ((Control.ModifierKeys & Keys.Control) == Keys.Control)
             {
                 int index = richTextBoxNote.GetCharIndexFromPosition(e.Location);
+                bool found = false;
+
                 foreach (Match match in Regex.Matches(richTextBoxNote.Text, "(\"[a-zA-Z]:\\\\[^\"]+\")|(https?://\\S+)"))
                 {
                     if (index >= match.Index && index <= match.Index + match.Length)
@@ -1111,6 +1342,42 @@ namespace FlowToDo
                         {
                             MessageBox.Show($"Cannot open link/path: {ex.Message}");
                         }
+                        found = true;
+                        break;
+                    }
+                }
+
+                
+
+                if (!found)
+                foreach (Match match in Regex.Matches(richTextBoxNote.Text, "[@#][0-9]+"))
+                {
+                    if (index >= match.Index && index <= match.Index + match.Length)
+                    {
+                        found = true;
+                        string link = match.Value.TrimStart('@').TrimStart('#').Replace("_", " ");
+                        if (int.TryParse(link, out int number))
+                        {
+                            ToDo? selectedTodo = getTodoByNumber(number);
+                            if (selectedTodo != null)
+                            {
+                                    this.textSaveToToDo();
+                                    this.SelectTodo(selectedTodo);
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                if (!found) 
+                foreach (Match match in Regex.Matches(richTextBoxNote.Text, "[@#][A-Za-z0-9_]+"))
+                {
+                    if (index >= match.Index && index <= match.Index + match.Length)
+                    {
+                        found = true;
+                        string link = match.Value.TrimStart('@').TrimStart('#').Replace("_", " ");
+                        this.textSaveToToDo();
+                        this.Search(link);
                         break;
                     }
                 }
@@ -1120,10 +1387,18 @@ namespace FlowToDo
         // TEXTBOX LINK CLICK
         private void richTextBoxNote_LinkClicked(object sender, LinkClickedEventArgs e)
         {
-            string link = e.LinkText.Trim('"'); // remove quotes if needed
+            if (e.LinkText == null)
+            {
+                return;
+            }
+
+            string? link = e.LinkText.Trim('"'); // remove quotes if needed
             try
             {
-                Process.Start(new ProcessStartInfo(link) { UseShellExecute = true });
+                if (link != null)
+                {
+                    Process.Start(new ProcessStartInfo(link) { UseShellExecute = true });
+                }
             }
             catch (Exception ex)
             {
@@ -1177,7 +1452,7 @@ namespace FlowToDo
                 e.SuppressKeyPress = true;
                 if (int.TryParse(textBoxPosition.Text.Trim(), out int number))
                 {
-                    ToDo selectedTodo = selectTodoByNumber(number);
+                    ToDo? selectedTodo = getTodoByNumber(number);
                     if (selectedTodo != null)
                     {
                         this.SelectTodo(selectedTodo);
@@ -1193,50 +1468,131 @@ namespace FlowToDo
 
         }
 
-        /******************************************************************************************/
-
-        // SPLIT CODE TO SORTEn AND UNSORTED PART
-        public void separator() { }
-
         // TEXTBOX GO TO POSITION
         private void GoToPosition(SearchItem searchItem)
         {
-            if (this.data.currentTodo != this.data.todoList[searchItem.todoListPos]) {
+            if (this.data == null)
+            {
+                return;
+            }
+
+            if (this.data.currentTodo != this.data.todoList[searchItem.todoListPos])
+            {
                 this.textSaveToToDo();
                 this.SelectTodo(this.data.todoList[searchItem.todoListPos]);
             }
-            
+
             richTextBoxNote.SelectionStart = searchItem.posInTodo;
             richTextBoxNote.SelectionLength = 0;
             richTextBoxNote.ScrollToCaret();
         }
 
+        // TEXTBOX KEY DOWN
+        private void richTextBoxNote_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Control && e.KeyCode == Keys.D)
+            {
+                e.SuppressKeyPress = true;
+                string date = "[" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "]";
+                int pos = this.richTextBoxNote.SelectionStart;
+                this.richTextBoxNote.Text = this.richTextBoxNote.Text.Insert(pos, date);
+                this.richTextBoxNote.SelectionStart = pos + date.Length;
+            }
+
+            if (e.Control && e.KeyCode == Keys.T)
+            {
+                e.SuppressKeyPress = true;
+                string date = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+                int pos = this.richTextBoxNote.SelectionStart;
+                this.richTextBoxNote.Text = this.richTextBoxNote.Text.Insert(pos, date);
+                this.richTextBoxNote.SelectionStart = pos + date.Length;
+            }
+
+            if (e.Control && e.Shift && e.KeyCode == Keys.V)
+            {
+                e.SuppressKeyPress = true;
+                if (Clipboard.ContainsText())
+                    richTextBoxNote.SelectedText = Clipboard.GetText(TextDataFormat.Text);
+            }
+
+            if (e.Control && e.KeyCode == Keys.R)
+            {
+                e.SuppressKeyPress = true;
+                richTextBoxNote.SelectionFont = richTextBoxNote.Font;
+                richTextBoxNote.SelectionColor = Color.Black;
+            }
+
+           
+        }
+        
+        /******************************************************************************************/
+
+        // SEARCHBAR SHOW
         private void SearchBarShow()
         {
+            if (textBoxSearch.Visible) {
+                return;
+            }
+
             textBoxSearch.Visible = true;
             buttonSearchLeft.Visible = true;
             buttonSearchRight.Visible = true;
             textBoxSearch.Focus();
         }
 
+        // SEARCHBAR HIDE
         private void SearchBarHide()
         {
+            if (!textBoxSearch.Visible)
+            {
+                return;
+            }
+
             textBoxSearch.Visible = false;
             buttonSearchLeft.Visible = false;
             buttonSearchRight.Visible = false;
             richTextBoxNote.Focus();
         }
 
-        private void textBoxSearch_TextChanged(object sender, EventArgs e)
+        private void Search(string searchFor)
         {
-            string searchFor = textBoxSearch.Text;
-            string text = "";
+            string? text = "";
             int index = 0;
+            SearchItem? searchItem = null;
+            int textIndex = -1;
 
-            if (searchFor.Length <= 2)
+            for (int i = 0; i < this.data.todoList.Count(); i++)
             {
-                return;
+                if ((this.data.todoList[i].deleted && !showDeleted) || (this.data.todoList[i].done && !showDone))
+                {
+                    continue;
+                }
+
+                text = this.data.todoList[i].rawText;
+
+                if (text == null)
+                {
+                    continue;
+                }
+
+                textIndex = text.IndexOf(searchFor, index, StringComparison.OrdinalIgnoreCase);
+                if (textIndex != -1) {
+                    searchItem = new SearchItem(i, textIndex);
+                    break;
+                }
+                                
             }
+
+            if (searchItem != null)
+            {
+                this.GoToPosition(searchItem);
+            }
+        }
+
+        private void SearchFirst(string searchFor)
+        {
+            string? text = "";
+            int index = 0;
 
             this.data.search.Clear();
 
@@ -1248,6 +1604,11 @@ namespace FlowToDo
                 }
 
                 text = this.data.todoList[i].rawText;
+
+                if (text == null)
+                {
+                    continue;
+                }
 
                 index = 0;
                 while (index < text.Length)
@@ -1268,8 +1629,29 @@ namespace FlowToDo
             }
         }
 
-        private void buttonSearchRight_Click(object sender, EventArgs e)
+        // SEARCHBAR TEXT CHANGE
+        private void textBoxSearch_TextChanged(object sender, EventArgs e)
         {
+            string searchFor = textBoxSearch.Text;
+
+            if (this.data == null || searchFor.Length <= 2)
+            {
+                this.data.search.Clear();
+            }
+            else {
+                this.SearchFirst(searchFor);
+            }
+                
+        }
+
+        // SEARCHBAR NEXT
+        private void buttonSearchRight_Click(object? sender, EventArgs? e)
+        {
+            if (this.data == null)
+            {
+                return;
+            }
+
             if (this.data.search.Count() > 0)
             {
                 this.data.searchIndex++;
@@ -1283,8 +1665,14 @@ namespace FlowToDo
             }
         }
 
-        private void buttonSearchLeft_Click(object sender, EventArgs e)
+        // SEARCHBAR PREV
+        private void buttonSearchLeft_Click(object? sender, EventArgs? e)
         {
+            if (this.data == null)
+            {
+                return;
+            }
+
             if (this.data.search.Count() > 0)
             {
                 this.data.searchIndex--;
@@ -1298,6 +1686,7 @@ namespace FlowToDo
             }
         }
 
+        // SEARCHBAR KEY DOWN
         private void textBoxSearch_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Escape)
@@ -1311,7 +1700,55 @@ namespace FlowToDo
                 e.SuppressKeyPress = true;
                 this.buttonSearchRight_Click(null, null);
             }
+
+            if (e.KeyCode == Keys.Up)
+            {
+                e.SuppressKeyPress = true;
+                this.buttonSearchLeft_Click(null, null);
+            }
+
+            if (e.KeyCode == Keys.Down)
+            {
+                e.SuppressKeyPress = true;
+                this.buttonSearchRight_Click(null, null);
+            }
         }
+
+        /******************************************************************************************/
+
+        public void getTimeEvents() { 
+            this.data.timeEvents.Clear();
+
+            var rx = new Regex(@"\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})(?:\s+(.*?))?\]");
+
+            foreach (ToDo todo in this.data.todoList) {
+
+                if (todo.rawText == null) {
+                    continue;
+                }
+
+                foreach (Match m in rx.Matches(todo.rawText))
+                {
+                    if (DateTime.TryParseExact(m.Groups[1].Value, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dt)) {
+                        TimeEvent timeEvent = new TimeEvent();
+                        timeEvent.timeString = m.Groups[1].Value;
+                        timeEvent.name = m.Groups[2].Value;
+                        timeEvent.time = dt;
+                        this.data.timeEvents.Add(timeEvent); 
+                    }
+                }
+            }
+
+            var sorted = this.data.timeEvents.OrderBy(d => d.time).ToList();
+            var now = DateTime.Now;
+            this.data.nextEvent = sorted.FirstOrDefault(d => d.time > now);
+        }
+
+        /******************************************************************************************/
+
+        // SPLIT CODE TO SORTEn AND UNSORTED PART
+        public void separator() { }
+
     }
 
     // RITCHTEXT HELPER
