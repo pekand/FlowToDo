@@ -35,6 +35,7 @@
             copyToolStripMenuItem = new ToolStripMenuItem();
             pasteToolStripMenuItem = new ToolStripMenuItem();
             colorToolStripMenuItem = new ToolStripMenuItem();
+            bckgToolStripMenuItem = new ToolStripMenuItem();
             fontToolStripMenuItem = new ToolStripMenuItem();
             toolStripMenuItem1 = new ToolStripSeparator();
             fileToolStripMenuItem = new ToolStripMenuItem();
@@ -42,7 +43,9 @@
             saveToolStripMenuItem = new ToolStripMenuItem();
             saveAsToolStripMenuItem = new ToolStripMenuItem();
             openToolStripMenuItem = new ToolStripMenuItem();
-            closeToolStripMenuItem = new ToolStripMenuItem();
+            toolsToolStripMenuItem = new ToolStripMenuItem();
+            copyStyleToolStripMenuItem = new ToolStripMenuItem();
+            pasteStyleToolStripMenuItem = new ToolStripMenuItem();
             optionsToolStripMenuItem = new ToolStripMenuItem();
             topMostToolStripMenuItem = new ToolStripMenuItem();
             defaultFontToolStripMenuItem = new ToolStripMenuItem();
@@ -55,6 +58,8 @@
             normalToolStripMenuItem = new ToolStripMenuItem();
             doneToolStripMenuItem = new ToolStripMenuItem();
             deletedToolStripMenuItem = new ToolStripMenuItem();
+            toolStripMenuItem2 = new ToolStripSeparator();
+            closeToolStripMenuItem = new ToolStripMenuItem();
             tableLayoutPanel1 = new TableLayoutPanel();
             richTextBoxNote = new CustomRichTextBox();
             tableLayoutPanel2 = new TableLayoutPanel();
@@ -79,9 +84,9 @@
             // 
             // contextMenuStrip
             // 
-            contextMenuStrip.Items.AddRange(new ToolStripItem[] { cutToolStripMenuItem, copyToolStripMenuItem, pasteToolStripMenuItem, colorToolStripMenuItem, fontToolStripMenuItem, toolStripMenuItem1, fileToolStripMenuItem, closeToolStripMenuItem, optionsToolStripMenuItem, showToolStripMenuItem });
+            contextMenuStrip.Items.AddRange(new ToolStripItem[] { cutToolStripMenuItem, copyToolStripMenuItem, pasteToolStripMenuItem, colorToolStripMenuItem, bckgToolStripMenuItem, fontToolStripMenuItem, toolStripMenuItem1, fileToolStripMenuItem, toolsToolStripMenuItem, optionsToolStripMenuItem, showToolStripMenuItem, toolStripMenuItem2, closeToolStripMenuItem });
             contextMenuStrip.Name = "contextMenuStrip";
-            contextMenuStrip.Size = new Size(131, 226);
+            contextMenuStrip.Size = new Size(131, 280);
             contextMenuStrip.Opening += contextMenuStrip_Opening;
             // 
             // cutToolStripMenuItem
@@ -111,6 +116,13 @@
             colorToolStripMenuItem.Size = new Size(130, 24);
             colorToolStripMenuItem.Text = "Color";
             colorToolStripMenuItem.Click += colorToolStripMenuItem_Click;
+            // 
+            // bckgToolStripMenuItem
+            // 
+            bckgToolStripMenuItem.Name = "bckgToolStripMenuItem";
+            bckgToolStripMenuItem.Size = new Size(130, 24);
+            bckgToolStripMenuItem.Text = "Bckg";
+            bckgToolStripMenuItem.Click += bckgToolStripMenuItem_Click;
             // 
             // fontToolStripMenuItem
             // 
@@ -159,12 +171,26 @@
             openToolStripMenuItem.Text = "Open";
             openToolStripMenuItem.Click += openToolStripMenuItem_Click;
             // 
-            // closeToolStripMenuItem
+            // toolsToolStripMenuItem
             // 
-            closeToolStripMenuItem.Name = "closeToolStripMenuItem";
-            closeToolStripMenuItem.Size = new Size(130, 24);
-            closeToolStripMenuItem.Text = "Close";
-            closeToolStripMenuItem.Click += closeToolStripMenuItem_Click;
+            toolsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { copyStyleToolStripMenuItem, pasteStyleToolStripMenuItem });
+            toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
+            toolsToolStripMenuItem.Size = new Size(130, 24);
+            toolsToolStripMenuItem.Text = "Tools";
+            // 
+            // copyStyleToolStripMenuItem
+            // 
+            copyStyleToolStripMenuItem.Name = "copyStyleToolStripMenuItem";
+            copyStyleToolStripMenuItem.Size = new Size(146, 24);
+            copyStyleToolStripMenuItem.Text = "Copy style";
+            copyStyleToolStripMenuItem.Click += copyStyleToolStripMenuItem_Click;
+            // 
+            // pasteStyleToolStripMenuItem
+            // 
+            pasteStyleToolStripMenuItem.Name = "pasteStyleToolStripMenuItem";
+            pasteStyleToolStripMenuItem.Size = new Size(146, 24);
+            pasteStyleToolStripMenuItem.Text = "Paste style";
+            pasteStyleToolStripMenuItem.Click += pasteStyleToolStripMenuItem_Click;
             // 
             // optionsToolStripMenuItem
             // 
@@ -249,6 +275,18 @@
             deletedToolStripMenuItem.Size = new Size(131, 24);
             deletedToolStripMenuItem.Text = "Deleted";
             deletedToolStripMenuItem.Click += deletedToolStripMenuItem_Click;
+            // 
+            // toolStripMenuItem2
+            // 
+            toolStripMenuItem2.Name = "toolStripMenuItem2";
+            toolStripMenuItem2.Size = new Size(127, 6);
+            // 
+            // closeToolStripMenuItem
+            // 
+            closeToolStripMenuItem.Name = "closeToolStripMenuItem";
+            closeToolStripMenuItem.Size = new Size(130, 24);
+            closeToolStripMenuItem.Text = "Close";
+            closeToolStripMenuItem.Click += closeToolStripMenuItem_Click;
             // 
             // tableLayoutPanel1
             // 
@@ -558,5 +596,10 @@
         private TextBox textBoxSearch;
         private Button buttonSearchRight;
         private Button buttonSearchLeft;
+        private ToolStripMenuItem toolsToolStripMenuItem;
+        private ToolStripMenuItem copyStyleToolStripMenuItem;
+        private ToolStripMenuItem pasteStyleToolStripMenuItem;
+        private ToolStripSeparator toolStripMenuItem2;
+        private ToolStripMenuItem bckgToolStripMenuItem;
     }
 }

@@ -2,6 +2,7 @@ using FlowToDo.Src.Forms;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
@@ -18,11 +19,11 @@ namespace FlowToDo
         public Data data = new Data();
 
         public string? pathToFlowToDoFile = "";
-        private bool inicialized = false;
+        public bool inicialized = false;
 
-        private bool showNormal = true;
-        private bool showDone = false;
-        private bool showDeleted = false;
+        public bool showNormal = true;
+        public bool showDone = false;
+        public bool showDeleted = false;
 
         public bool saved = true;
         public bool suspenUnsave = false;
@@ -30,7 +31,13 @@ namespace FlowToDo
         public string? unmodifiedText = "";
         public System.Drawing.Font? defaultRitchTextFont = null;
 
-        private DateTime? nextBackup = null;
+        public DateTime? nextBackup = null;
+
+
+        // COPY STYLE TOOL 
+        public System.Drawing.Font? selectedFont = null;
+        public Color selectedColor = Color.Empty;
+        public Color selectedBackground = Color.Empty;
 
 
         [DllImport("user32.dll")]
@@ -476,7 +483,8 @@ namespace FlowToDo
                 makeBackup();
             }
 
-            if (this.data.nextEvent != null && DateTime.Now >= this.data.nextEvent.time) {
+            if (this.data.nextEvent != null && DateTime.Now >= this.data.nextEvent.time)
+            {
                 Notifications.Show(this.data.nextEvent.name);
                 this.getTimeEvents();
             }
@@ -586,7 +594,7 @@ namespace FlowToDo
                 this.data.currentTodo.text = this.richTextBoxNote.Rtf;
                 this.unmodifiedText = this.richTextBoxNote.Rtf;
                 this.data.currentTodo.rawText = this.richTextBoxNote.Text;
-                this.data.currentTodo.isEmpty = this.richTextBoxNote.Text.Trim() == "";                
+                this.data.currentTodo.isEmpty = this.richTextBoxNote.Text.Trim() == "";
             }
         }
 
@@ -1228,6 +1236,19 @@ namespace FlowToDo
             }
         }
 
+        // CONTEXTMENU TEXT BACKGRUND COLOR
+        private void bckgToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (var cd = new ColorDialog())
+            {
+                cd.Color = richTextBoxNote.SelectionBackColor.IsEmpty ? richTextBoxNote.BackColor : richTextBoxNote.SelectionBackColor;
+                if (cd.ShowDialog() == DialogResult.OK)
+                {
+                    if (richTextBoxNote.SelectionLength > 0) richTextBoxNote.SelectionBackColor = cd.Color;
+                }
+            }
+        }
+
         // CONTEXTMENU TEXTBOX FONT OD SELECTION
         private void fontToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -1323,7 +1344,33 @@ namespace FlowToDo
                 }
             }
         }
-        
+
+        // CONTEXTMENU COPY STYLE
+        private void copyStyleToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.selectedFont = richTextBoxNote.SelectionFont;
+            this.selectedColor = richTextBoxNote.SelectionColor;
+            this.selectedBackground = richTextBoxNote.SelectionBackColor;
+        }
+
+        // CONTEXTMENU PASTE STYLE
+        private void pasteStyleToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (this.selectedFont != null)
+            {
+                richTextBoxNote.SelectionFont = this.selectedFont;
+            }
+
+            if (this.selectedColor != Color.Empty)
+            {
+                richTextBoxNote.SelectionColor = this.selectedColor;
+            }
+
+            if (this.selectedBackground != Color.Empty)
+            {
+                richTextBoxNote.SelectionBackColor = this.selectedBackground;
+            }
+        }
         /******************************************************************************************/
 
         // TEXTBOX TECH CHANGE
@@ -1337,7 +1384,7 @@ namespace FlowToDo
 
         // TEXTBOX MOUSE DOWN
         private void richTextBoxNote_MouseDown(object sender, MouseEventArgs e)
-        {            
+        {
             if ((Control.ModifierKeys & Keys.Control) == Keys.Control)
             {
                 int index = richTextBoxNote.GetCharIndexFromPosition(e.Location);
@@ -1361,40 +1408,40 @@ namespace FlowToDo
                     }
                 }
 
-                
+
 
                 if (!found)
-                foreach (Match match in Regex.Matches(richTextBoxNote.Text, "[@#][0-9]+"))
-                {
-                    if (index >= match.Index && index <= match.Index + match.Length)
+                    foreach (Match match in Regex.Matches(richTextBoxNote.Text, "[@#][0-9]+"))
                     {
-                        found = true;
-                        string link = match.Value.TrimStart('@').TrimStart('#').Replace("_", " ");
-                        if (int.TryParse(link, out int number))
+                        if (index >= match.Index && index <= match.Index + match.Length)
                         {
-                            ToDo? selectedTodo = getTodoByNumber(number);
-                            if (selectedTodo != null)
+                            found = true;
+                            string link = match.Value.TrimStart('@').TrimStart('#').Replace("_", " ");
+                            if (int.TryParse(link, out int number))
                             {
+                                ToDo? selectedTodo = getTodoByNumber(number);
+                                if (selectedTodo != null)
+                                {
                                     this.textSaveToToDo();
                                     this.SelectTodo(selectedTodo);
+                                }
                             }
+                            break;
                         }
-                        break;
                     }
-                }
 
-                if (!found) 
-                foreach (Match match in Regex.Matches(richTextBoxNote.Text, "[@#][A-Za-z0-9_]+"))
-                {
-                    if (index >= match.Index && index <= match.Index + match.Length)
+                if (!found)
+                    foreach (Match match in Regex.Matches(richTextBoxNote.Text, "[@#][A-Za-z0-9_]+"))
                     {
-                        found = true;
-                        string link = match.Value.TrimStart('@').TrimStart('#').Replace("_", " ");
-                        this.textSaveToToDo();
-                        this.Search(link, new SearchItem(this.currentTodoPos(), match.Index));
-                        break;
+                        if (index >= match.Index && index <= match.Index + match.Length)
+                        {
+                            found = true;
+                            string link = match.Value.TrimStart('@').TrimStart('#').Replace("_", " ");
+                            this.textSaveToToDo();
+                            this.Search(link, new SearchItem(this.currentTodoPos(), match.Index));
+                            break;
+                        }
                     }
-                }
             }
         }
 
@@ -1536,15 +1583,17 @@ namespace FlowToDo
                 richTextBoxNote.SelectionColor = Color.Black;
             }
 
-           
+
         }
-        
+
+
         /******************************************************************************************/
 
         // SEARCHBAR SHOW
         private void SearchBarShow()
         {
-            if (textBoxSearch.Visible) {
+            if (textBoxSearch.Visible)
+            {
                 return;
             }
 
@@ -1591,11 +1640,12 @@ namespace FlowToDo
                 }
 
                 textIndex = text.IndexOf(searchFor, index, StringComparison.OrdinalIgnoreCase);
-                if (textIndex != -1 && (skipSearchItem != null && skipSearchItem.todoListPos != i && skipSearchItem.posInTodo != textIndex)) {
+                if (textIndex != -1 && (skipSearchItem != null && skipSearchItem.todoListPos != i && skipSearchItem.posInTodo != textIndex))
+                {
                     searchItem = new SearchItem(i, textIndex);
                     break;
                 }
-                                
+
             }
 
             if (searchItem != null)
@@ -1653,10 +1703,11 @@ namespace FlowToDo
             {
                 this.data.search.Clear();
             }
-            else {
+            else
+            {
                 this.SearchFirst(searchFor);
             }
-                
+
         }
 
         // SEARCHBAR NEXT
@@ -1731,25 +1782,29 @@ namespace FlowToDo
 
         /******************************************************************************************/
 
-        public void getTimeEvents() { 
+        public void getTimeEvents()
+        {
             this.data.timeEvents.Clear();
 
             var rx = new Regex(@"\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})(?:\s+(.*?))?\]");
 
-            foreach (ToDo todo in this.data.todoList) {
+            foreach (ToDo todo in this.data.todoList)
+            {
 
-                if (todo.rawText == null) {
+                if (todo.rawText == null)
+                {
                     continue;
                 }
 
                 foreach (Match m in rx.Matches(todo.rawText))
                 {
-                    if (DateTime.TryParseExact(m.Groups[1].Value, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dt)) {
+                    if (DateTime.TryParseExact(m.Groups[1].Value, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dt))
+                    {
                         TimeEvent timeEvent = new TimeEvent();
                         timeEvent.timeString = m.Groups[1].Value;
                         timeEvent.name = m.Groups[2].Value;
                         timeEvent.time = dt;
-                        this.data.timeEvents.Add(timeEvent); 
+                        this.data.timeEvents.Add(timeEvent);
                     }
                 }
             }
@@ -1763,6 +1818,8 @@ namespace FlowToDo
 
         // SPLIT CODE TO SORTEn AND UNSORTED PART
         public void separator() { }
+
+
 
     }
 
