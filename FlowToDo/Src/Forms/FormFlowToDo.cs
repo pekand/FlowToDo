@@ -109,7 +109,7 @@ namespace FlowToDo
                     }
 
                     this.data = data;
-                    this.saved = true;
+                    this.markAsSaved();
                     this.pathToFlowToDoFile = filePath;
 
                     this.richTextBoxNote.Font = Tools.StringToFont(this.data.defaultFont);
@@ -204,7 +204,7 @@ namespace FlowToDo
                 {
                     File.WriteAllText(path, xml);
                 }
-                this.saved = true;
+                this.markAsSaved();
             }
             catch (Exception)
             {
@@ -268,73 +268,73 @@ namespace FlowToDo
         // EVENT SHORTCUTS
         private void FormFlowToDo_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Control && e.KeyCode == Keys.S)
+            if (e.Control && e.KeyCode == Keys.S) // KEY CTRL+S
             {
                 e.SuppressKeyPress = true;
                 this.saveToolStripMenuItem_Click(null, null);
             }
 
-            if (e.Control && e.Shift && e.KeyCode == Keys.S)
+            if (e.Control && e.Shift && e.KeyCode == Keys.S) // KEY CTRL+SHIFT+S
             {
                 e.SuppressKeyPress = true;
                 this.saveAsToolStripMenuItem_Click(sender, e);
             }
 
-            if (e.Control && e.KeyCode == Keys.O)
+            if (e.Control && e.KeyCode == Keys.O) // KEY CTRL+O
             {
                 e.SuppressKeyPress = true;
                 this.openToolStripMenuItem_Click(sender, e);
             }
 
-            if (e.Control && e.KeyCode == Keys.N)
+            if (e.Control && e.KeyCode == Keys.N) // KEY CTRL+N
             {
                 e.SuppressKeyPress = true;
                 this.buttonAdd_Click(sender, e);
             }
 
-            if (e.Control && e.KeyCode == Keys.F)
+            if (e.Control && e.KeyCode == Keys.F) // KEY CTRL+F
             {
                 e.SuppressKeyPress = true;
                 this.SearchBarShow();
             }
 
-            if (e.KeyCode == Keys.F5)
+            if (e.KeyCode == Keys.F5) // KEY F5
             {
                 e.SuppressKeyPress = true;
                 this.buttonAdd_Click(sender, e);
             }
 
-            if (e.Control && e.KeyCode == Keys.Delete)
+            if (e.Control && e.KeyCode == Keys.Delete) // KEY Delete
             {
                 e.SuppressKeyPress = true;
                 this.buttonDelete_Click(sender, e);
             }
 
-            if (e.KeyCode == Keys.F9)
+            if (e.KeyCode == Keys.F9) // KEY F9
             {
                 e.SuppressKeyPress = true;
                 this.buttonDone_Click(sender, e);
             }
 
-            if (e.Control && e.KeyCode == Keys.Right)
+            if (e.Control && e.KeyCode == Keys.Right) // KEY RIGHT
             {
                 e.SuppressKeyPress = true;
                 this.buttonRight_Click(sender, e);
             }
 
-            if (e.Control && e.KeyCode == Keys.Left)
+            if (e.Control && e.KeyCode == Keys.Left) // KEY LEFT
             {
                 e.SuppressKeyPress = true;
                 this.buttonLeft_Click(sender, e);
             }
 
-            if (e.Control && e.KeyCode == Keys.Up)
+            if (e.Control && e.KeyCode == Keys.Up) // KEY UP
             {
                 e.SuppressKeyPress = true;
                 this.buttonSkipRight_Click(sender, e);
             }
 
-            if (e.Control && e.KeyCode == Keys.Down)
+            if (e.Control && e.KeyCode == Keys.Down) // KEY DOWN
             {
                 e.SuppressKeyPress = true;
                 this.buttonSkipLeft_Click(sender, e);
@@ -492,7 +492,7 @@ namespace FlowToDo
             this.data.currentTodo = new ToDo();
             this.data.todoList.Add(this.data.currentTodo);
 
-            this.saved = true;
+            this.markAsSaved();
             this.suspenUnsave = false;
             this.unSavedAt = DateTime.Now;
             this.richTextBoxNote.Font = defaultRitchTextFont;
@@ -584,9 +584,22 @@ namespace FlowToDo
                 }
 
                 this.data.currentTodo.text = this.richTextBoxNote.Rtf;
+                this.unmodifiedText = this.richTextBoxNote.Rtf;
                 this.data.currentTodo.rawText = this.richTextBoxNote.Text;
-                this.data.currentTodo.isEmpty = this.richTextBoxNote.Text.Trim() == "";
+                this.data.currentTodo.isEmpty = this.richTextBoxNote.Text.Trim() == "";                
             }
+        }
+
+        public void markAsSaved()
+        {
+
+            if (this.saved)
+            {
+                return;
+            }
+
+            this.saved = true;
+            this.Text = Program.appName;
         }
 
         // UNSAVE
@@ -600,6 +613,7 @@ namespace FlowToDo
 
             this.saved = false;
             this.unSavedAt = DateTime.Now;
+            this.Text = Program.appName + "*";
         }
 
         // PAGER UPDATE
@@ -1377,7 +1391,7 @@ namespace FlowToDo
                         found = true;
                         string link = match.Value.TrimStart('@').TrimStart('#').Replace("_", " ");
                         this.textSaveToToDo();
-                        this.Search(link);
+                        this.Search(link, new SearchItem(this.currentTodoPos(), match.Index));
                         break;
                     }
                 }
@@ -1554,7 +1568,8 @@ namespace FlowToDo
             richTextBoxNote.Focus();
         }
 
-        private void Search(string searchFor)
+        // SEARCH WITHOUT SEARCH BAR
+        private void Search(string searchFor, SearchItem? skipSearchItem = null)
         {
             string? text = "";
             int index = 0;
@@ -1576,7 +1591,7 @@ namespace FlowToDo
                 }
 
                 textIndex = text.IndexOf(searchFor, index, StringComparison.OrdinalIgnoreCase);
-                if (textIndex != -1) {
+                if (textIndex != -1 && (skipSearchItem != null && skipSearchItem.todoListPos != i && skipSearchItem.posInTodo != textIndex)) {
                     searchItem = new SearchItem(i, textIndex);
                     break;
                 }

@@ -497,7 +497,7 @@
             Name = "FormFlowToDo";
             Padding = new Padding(10);
             StartPosition = FormStartPosition.Manual;
-            Text = "Flow ToDo";
+            Text = "FlowToDo";
             TopMost = true;
             FormClosed += FormFlowToDo_FormClosed;
             Load += FormFlowToDo_Load;
