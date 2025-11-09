@@ -1371,6 +1371,19 @@ namespace FlowToDo
                 richTextBoxNote.SelectionBackColor = this.selectedBackground;
             }
         }
+
+        // CONTEXTMENU SHOW ABOUT FORM
+        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (var about = new FormAbout())
+            {
+                bool topMost = this.TopMost;
+                this.TopMost = false;
+                about.ShowDialog(this);
+                this.TopMost = topMost;
+            }
+        }
+
         /******************************************************************************************/
 
         // TEXTBOX TECH CHANGE
@@ -1818,9 +1831,6 @@ namespace FlowToDo
 
         // SPLIT CODE TO SORTEn AND UNSORTED PART
         public void separator() { }
-
-
-
     }
 
     // RITCHTEXT HELPER

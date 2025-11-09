@@ -12,6 +12,8 @@ namespace FlowToDo
         public static string mainConfigFile = "config.FlowToDo";
         public static string defaultExtension = ".FlowToDo";
 
+        public static string updateXmlUrl = "https://project.coom/FlowToDo.xml";
+
         [STAThread]
         static void Main(string[] args)
         {

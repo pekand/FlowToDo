@@ -59,6 +59,7 @@
             doneToolStripMenuItem = new ToolStripMenuItem();
             deletedToolStripMenuItem = new ToolStripMenuItem();
             toolStripMenuItem2 = new ToolStripSeparator();
+            aboutToolStripMenuItem = new ToolStripMenuItem();
             closeToolStripMenuItem = new ToolStripMenuItem();
             tableLayoutPanel1 = new TableLayoutPanel();
             richTextBoxNote = new CustomRichTextBox();
@@ -84,9 +85,9 @@
             // 
             // contextMenuStrip
             // 
-            contextMenuStrip.Items.AddRange(new ToolStripItem[] { cutToolStripMenuItem, copyToolStripMenuItem, pasteToolStripMenuItem, colorToolStripMenuItem, bckgToolStripMenuItem, fontToolStripMenuItem, toolStripMenuItem1, fileToolStripMenuItem, toolsToolStripMenuItem, optionsToolStripMenuItem, showToolStripMenuItem, toolStripMenuItem2, closeToolStripMenuItem });
+            contextMenuStrip.Items.AddRange(new ToolStripItem[] { cutToolStripMenuItem, copyToolStripMenuItem, pasteToolStripMenuItem, colorToolStripMenuItem, bckgToolStripMenuItem, fontToolStripMenuItem, toolStripMenuItem1, fileToolStripMenuItem, toolsToolStripMenuItem, optionsToolStripMenuItem, showToolStripMenuItem, toolStripMenuItem2, aboutToolStripMenuItem, closeToolStripMenuItem });
             contextMenuStrip.Name = "contextMenuStrip";
-            contextMenuStrip.Size = new Size(131, 280);
+            contextMenuStrip.Size = new Size(131, 304);
             contextMenuStrip.Opening += contextMenuStrip_Opening;
             // 
             // cutToolStripMenuItem
@@ -280,6 +281,13 @@
             // 
             toolStripMenuItem2.Name = "toolStripMenuItem2";
             toolStripMenuItem2.Size = new Size(127, 6);
+            // 
+            // aboutToolStripMenuItem
+            // 
+            aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
+            aboutToolStripMenuItem.Size = new Size(130, 24);
+            aboutToolStripMenuItem.Text = "About";
+            aboutToolStripMenuItem.Click += aboutToolStripMenuItem_Click;
             // 
             // closeToolStripMenuItem
             // 
@@ -601,5 +609,6 @@
         private ToolStripMenuItem pasteStyleToolStripMenuItem;
         private ToolStripSeparator toolStripMenuItem2;
         private ToolStripMenuItem bckgToolStripMenuItem;
+        private ToolStripMenuItem aboutToolStripMenuItem;
     }
 }
